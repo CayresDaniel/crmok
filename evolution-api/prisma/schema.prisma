@@ -1,0 +1,169 @@
+// prisma/schema.prisma na pasta evolution-api
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Instance {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  clientName        String?  @map("client_name")
+  token             String?
+  number            String?
+  qrcode            Boolean? @default(false)
+  status            String?  @default("close")
+  serverUrl         String?  @map("server_url")
+  apikey            String?
+  ownerJid          String?  @map("owner_jid")
+  profileName       String?  @map("profile_name")  
+  profilePicUrl     String?  @map("profile_pic_url")
+  connectionStatus  String?  @map("connection_status") @default("close")
+  integration       String?  @default("WHATSAPP-BAILEYS")
+  businessId        String?  @map("business_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos necessários
+  Setting    Setting[]
+  Chatwoot   Chatwoot[]
+  Proxy      Proxy[]
+  Rabbitmq   Rabbitmq[]
+  Nats       Nats[]
+  Sqs        Sqs[]
+  Websocket  Websocket[]
+  Webhook    Webhook[]  // Adicione esta linha
+
+  @@map("instances")
+}
+
+model Setting {
+  id                String   @id @default(cuid())
+  instanceId        String   @map("instance_id") @unique
+  rejectCall        Boolean? @map("reject_call") @default(false)
+  msgCall           String?  @map("msg_call")
+  groupsIgnore      Boolean? @map("groups_ignore") @default(false)
+  alwaysOnline      Boolean? @map("always_online") @default(false)
+  readMessages      Boolean? @map("read_messages") @default(false)
+  readStatus        Boolean? @map("read_status") @default(false)
+  syncFullHistory   Boolean? @map("sync_full_history") @default(false)
+  wavoipToken       String?  @map("wavoip_token")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  instance          Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("settings")
+}
+
+model Chatwoot {
+  id                      String   @id @default(cuid())
+  instanceId              String   @map("instance_id")
+  enabled                 Boolean  @default(false)
+  accountId               String?  @map("account_id")
+  token                   String?
+  url                     String?
+  signMsg                 Boolean? @map("sign_msg") @default(false)
+  signDelimiter           String?  @map("sign_delimiter")
+  numberIgnore            String?  @map("number_ignore")
+  mergeContact            Boolean? @map("merge_contact") @default(false)
+  importContacts          Boolean? @map("import_contacts") @default(false)
+  importMessages          Boolean? @map("import_messages") @default(false)
+  daysLimitImportMessages Int?     @map("days_limit_import_messages")
+  organization            String?
+  logo                    String?
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  instance                Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("chatwoot")
+}
+
+model Proxy {
+  id         String   @id @default(cuid())
+  instanceId String   @map("instance_id")
+  enabled    Boolean  @default(false)
+  host       String?
+  port       String?
+  protocol   String?
+  username   String?
+  password   String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  instance   Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("proxy")
+}
+
+model Rabbitmq {
+  id         String   @id @default(cuid())
+  instanceId String   @map("instance_id")
+  enabled    Boolean  @default(false)
+  events     Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  instance   Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("rabbitmq")
+}
+
+model Nats {
+  id         String   @id @default(cuid())
+  instanceId String   @map("instance_id")
+  enabled    Boolean  @default(false)
+  events     Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  instance   Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("nats")
+}
+
+model Sqs {
+  id         String   @id @default(cuid())
+  instanceId String   @map("instance_id")
+  enabled    Boolean  @default(false)
+  events     Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  instance   Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("sqs")
+}
+
+model Websocket {
+  id         String   @id @default(cuid())
+  instanceId String   @map("instance_id")
+  enabled    Boolean  @default(false)
+  events     Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  instance   Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("websocket")
+}
+
+// Adicione o modelo Webhook que estava faltando
+model Webhook {
+  id         String   @id @default(cuid())
+  instanceId String   @map("instance_id") @unique  // Único por instância
+  enabled    Boolean  @default(false)
+  url        String?
+  events     Json?
+  webhook    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  instance   Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("webhook")  // Nome da tabela que o código está procurando
+}

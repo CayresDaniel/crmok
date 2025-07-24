@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Frontend - Coven Beauty</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #1a1a1a; 
+            color: #fff;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-section { 
+            background: #2a2a2a; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        button { 
+            background: #6366f1; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #4f46e5; }
+        input, select { 
+            padding: 8px; 
+            margin: 5px; 
+            border: 1px solid #555;
+            background: #333;
+            color: #fff;
+            border-radius: 4px;
+        }
+        .result { 
+            background: #333; 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success { border-left: 4px solid #22c55e; }
+        .error { border-left: 4px solid #ef4444; }
+        .info { border-left: 4px solid #3b82f6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Debug Frontend - Coven Beauty</h1>
+        
+        <div class="test-section">
+            <h2>🔐 Autenticação</h2>
+            <button onclick="testLogin()">Testar Login</button>
+            <button onclick="checkToken()">Verificar Token</button>
+            <div id="auth-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>👥 Clientes</h2>
+            <button onclick="loadClients()">Carregar Clientes</button>
+            <button onclick="testCreateClient()">Criar Cliente Teste</button>
+            <div>
+                <input type="text" id="client-name" placeholder="Nome do cliente" value="Teste Debug">
+                <input type="email" id="client-email" placeholder="Email (opcional)">
+                <input type="tel" id="client-phone" placeholder="Telefone (opcional)">
+                <button onclick="createCustomClient()">Criar Cliente Personalizado</button>
+            </div>
+            <div id="clients-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>👤 Usuários</h2>
+            <button onclick="loadUsers()">Carregar Usuários</button>
+            <button onclick="testCreateUser()">Criar Usuário Teste</button>
+            <div>
+                <input type="text" id="user-username" placeholder="Username" value="teste_debug">
+                <input type="text" id="user-name" placeholder="Nome" value="Usuário Debug">
+                <input type="password" id="user-password" placeholder="Senha" value="123456">
+                <select id="user-role">
+                    <option value="ADMIN">Administrador</option>
+                    <option value="CABELEIREIRO">Cabeleireiro</option>
+                </select>
+                <button onclick="createCustomUser()">Criar Usuário Personalizado</button>
+            </div>
+            <div id="users-result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3009/api';
+        let authToken = localStorage.getItem('debug-token');
+
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+            console.log(`[${type.toUpperCase()}]`, message);
+        }
+
+        async function apiRequest(endpoint, options = {}) {
+            const url = `${API_BASE}${endpoint}`;
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+                ...options.headers
+            };
+
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(`${response.status}: ${data.message || 'Erro desconhecido'}`);
+                }
+
+                return data;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        async function testLogin() {
+            try {
+                log('auth-result', 'Fazendo login...', 'info');
+                
+                const result = await apiRequest('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        username: 'Cayres',
+                        password: '@D4n63rl0l'
+                    })
+                });
+
+                authToken = result.access_token;
+                localStorage.setItem('debug-token', authToken);
+                
+                log('auth-result', `✅ Login realizado com sucesso!\nToken: ${authToken.substring(0, 50)}...\nUsuário: ${result.user.name}`, 'success');
+            } catch (error) {
+                log('auth-result', `❌ Erro no login: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkToken() {
+            if (!authToken) {
+                log('auth-result', '❌ Nenhum token encontrado', 'error');
+                return;
+            }
+            log('auth-result', `✅ Token presente: ${authToken.substring(0, 50)}...`, 'info');
+        }
+
+        async function loadClients() {
+            try {
+                log('clients-result', 'Carregando clientes...', 'info');
+                
+                const clients = await apiRequest('/clients');
+                
+                log('clients-result', `✅ ${clients.length} clientes carregados:\n${JSON.stringify(clients, null, 2)}`, 'success');
+            } catch (error) {
+                log('clients-result', `❌ Erro ao carregar clientes: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCreateClient() {
+            try {
+                log('clients-result', 'Criando cliente teste...', 'info');
+                
+                const client = await apiRequest('/clients', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: `Cliente Debug ${Date.now()}`
+                    })
+                });
+                
+                log('clients-result', `✅ Cliente criado com sucesso:\n${JSON.stringify(client, null, 2)}`, 'success');
+            } catch (error) {
+                log('clients-result', `❌ Erro ao criar cliente: ${error.message}`, 'error');
+            }
+        }
+
+        async function createCustomClient() {
+            try {
+                const name = document.getElementById('client-name').value;
+                const email = document.getElementById('client-email').value;
+                const phone = document.getElementById('client-phone').value;
+
+                if (!name) {
+                    log('clients-result', '❌ Nome é obrigatório', 'error');
+                    return;
+                }
+
+                log('clients-result', 'Criando cliente personalizado...', 'info');
+                
+                const clientData = { name };
+                if (email) clientData.email = email;
+                if (phone) clientData.phone = phone;
+                
+                const client = await apiRequest('/clients', {
+                    method: 'POST',
+                    body: JSON.stringify(clientData)
+                });
+                
+                log('clients-result', `✅ Cliente criado:\n${JSON.stringify(client, null, 2)}`, 'success');
+            } catch (error) {
+                log('clients-result', `❌ Erro: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                log('users-result', 'Carregando usuários...', 'info');
+                
+                const users = await apiRequest('/users');
+                
+                log('users-result', `✅ ${users.length} usuários carregados:\n${JSON.stringify(users, null, 2)}`, 'success');
+            } catch (error) {
+                log('users-result', `❌ Erro ao carregar usuários: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCreateUser() {
+            try {
+                log('users-result', 'Criando usuário teste...', 'info');
+                
+                const user = await apiRequest('/users', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        username: `debug_${Date.now()}`,
+                        name: `Usuário Debug ${Date.now()}`,
+                        password: '123456',
+                        role: 'CABELEIREIRO'
+                    })
+                });
+                
+                log('users-result', `✅ Usuário criado:\n${JSON.stringify(user, null, 2)}`, 'success');
+            } catch (error) {
+                log('users-result', `❌ Erro ao criar usuário: ${error.message}`, 'error');
+            }
+        }
+
+        async function createCustomUser() {
+            try {
+                const username = document.getElementById('user-username').value;
+                const name = document.getElementById('user-name').value;
+                const password = document.getElementById('user-password').value;
+                const role = document.getElementById('user-role').value;
+
+                if (!username || !name || !password || !role) {
+                    log('users-result', '❌ Todos os campos são obrigatórios', 'error');
+                    return;
+                }
+
+                log('users-result', 'Criando usuário personalizado...', 'info');
+                
+                const user = await apiRequest('/users', {
+                    method: 'POST',
+                    body: JSON.stringify({ username, name, password, role })
+                });
+                
+                log('users-result', `✅ Usuário criado:\n${JSON.stringify(user, null, 2)}`, 'success');
+            } catch (error) {
+                log('users-result', `❌ Erro: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-login no carregamento da página
+        window.onload = () => {
+            if (authToken) {
+                checkToken();
+            } else {
+                log('auth-result', 'ℹ️ Faça login primeiro para testar as outras funcionalidades', 'info');
+            }
+        };
+    </script>
+</body>
+</html>
