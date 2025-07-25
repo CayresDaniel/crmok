@@ -173,8 +173,8 @@
                 </div>
               </td>
               <td class="py-4 px-4">
-                <span :class="procedure.isActive ? 'badge-success' : 'badge-error'">
-                  {{ procedure.isActive ? 'Ativo' : 'Inativo' }}
+                <span :class="procedure.active ? 'badge-success' : 'badge-error'">
+                  {{ procedure.active ? 'Ativo' : 'Inativo' }}
                 </span>
               </td>
               <td class="py-4 px-4 text-right">
@@ -432,7 +432,7 @@ const filteredProcedures = computed(() => {
 
   if (statusFilter.value !== '') {
     const isActive = statusFilter.value === 'true'
-    filtered = filtered.filter(procedure => procedure.isActive === isActive)
+    filtered = filtered.filter(procedure => procedure.active === isActive)
   }
 
   return filtered.sort((a, b) => a.name.localeCompare(b.name))
@@ -531,7 +531,7 @@ const editProcedure = (procedure) => {
       acc[p.id] = p.pivot?.quantity || 1
       return acc
     }, {}) || {},
-    isActive: procedure.isActive
+    isActive: procedure.active
   })
   showCreateModal.value = false
 }
@@ -561,7 +561,7 @@ const saveProcedure = async () => {
       description: procedureForm.description,
       duration: parseInt(procedureForm.duration),
       price: parseFloat(procedureForm.price),
-      isActive: procedureForm.isActive
+      active: procedureForm.isActive
     }
     
     const method = editingProcedure.value ? 'PATCH' : 'POST'
@@ -630,7 +630,7 @@ const toggleProcedureStatus = async (procedure) => {
         'Authorization': `Bearer ${token.value}`
       },
       body: {
-        isActive: !procedure.isActive
+        active: !procedure.active
       }
     })
     

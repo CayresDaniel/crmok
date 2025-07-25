@@ -6,6 +6,7 @@ import {
   IsPositive,
   Min,
   ValidateIf,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -32,4 +33,8 @@ export class CreateProcedureDto {
   @Type(() => Number)
   @IsPositive()
   price: number;
+
+  @IsBoolean()
+  @IsOptional()
+  active?: boolean;
 }
