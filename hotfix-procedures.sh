@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🔧 Aplicando hotfix: Correção da validação de category nos DTOs..."
+echo "🔧 Aplicando hotfix: Correção de campos category e active nos DTOs..."
 
 # 1. Ir para o diretório do projeto
 cd /home/coven-beauty
@@ -30,5 +30,8 @@ curl -s http://localhost:3009/api/health | head -1
 
 echo ""
 echo "✅ Hotfix aplicado!"
-echo "🔧 Correção: Validação de campo category vazio nos DTOs"
-echo "📝 Agora é possível criar procedures/products sem categoria"
+echo "🔧 Correções aplicadas:"
+echo "  • Campo 'category' pode ficar vazio (string vazia aceita)"
+echo "  • Campo 'active' adicionado ao DTO de procedures"
+echo "  • Mapeamento correto entre frontend (isActive) e backend (active)"
+echo "📝 Agora é possível criar procedures corretamente!"
