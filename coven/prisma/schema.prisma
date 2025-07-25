@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,6 +5,172 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  username     String        @unique
+  password     String
+  name         String
+  email        String?       @unique
+  phone        String?
+  role         UserRole      @default(CABELEIREIRO)
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+  reminders    Reminder[]
+
+  @@map("users")
+}
+
+model Client {
+  id           String        @id @default(uuid())
+  name         String
+  email        String?       @unique
+  phone        String?
+  birthDate    DateTime?
+  address      String?
+  observations String?
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+  reminders    Reminder[]
+
+  @@map("clients")
+}
+
+model Procedure {
+  id                    String                 @id @default(uuid())
+  name                  String
+  description           String?
+  category              String?                // Categoria do procedimento
+  duration              Int
+  price                 Decimal                @db.Decimal(10, 2)
+  active                Boolean                @default(true)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  appointmentProcedures AppointmentProcedure[]
+  procedureProducts     ProcedureProduct[]
+
+  @@map("procedures")
+}
+
+model Product {
+  id                String             @id @default(uuid())
+  name              String
+  description       String?
+  category          String?            // Categoria do produto
+  type              ProductType
+  price             Decimal?           @db.Decimal(10, 2)
+  stock             Int                @default(0)
+  minStock          Int                @default(0)
+  unit              String?
+  active            Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  procedureProducts ProcedureProduct[]
+  stockMovements    StockMovement[]
+
+  @@map("products")
+}
+
+model StockMovement {
+  id        String          @id @default(uuid())
+  productId String
+  type      TransactionType
+  quantity  Int
+  reason    String?
+  createdAt DateTime        @default(now())
+  product   Product         @relation(fields: [productId], references: [id])
+
+  @@index([productId], map: "stock_movements_productId_fkey")
+  @@map("stock_movements")
+}
+
+model ProcedureProduct {
+  id          String    @id @default(uuid())
+  procedureId String
+  productId   String
+  quantity    Int
+  procedure   Procedure @relation(fields: [procedureId], references: [id])
+  product     Product   @relation(fields: [productId], references: [id])
+
+  @@unique([procedureId, productId])
+  @@index([productId], map: "procedure_products_productId_fkey")
+  @@map("procedure_products")
+}
+
+model Appointment {
+  id            String                 @id @default(uuid())
+  clientId      String
+  userId        String
+  date          DateTime
+  startTime     DateTime
+  endTime       DateTime?
+  status        AppointmentStatus      @default(AGENDADO)
+  paymentMethod PaymentMethod?
+  totalPrice    Decimal?               @db.Decimal(10, 2)
+  discount      Decimal?               @db.Decimal(10, 2)
+  observations  String?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  procedures    AppointmentProcedure[]
+  client        Client                 @relation(fields: [clientId], references: [id])
+  user          User                   @relation(fields: [userId], references: [id])
+
+  @@index([clientId], map: "appointments_clientId_fkey")
+  @@index([userId], map: "appointments_userId_fkey")
+  @@map("appointments")
+}
+
+model AppointmentProcedure {
+  id            String      @id @default(uuid())
+  appointmentId String
+  procedureId   String
+  price         Decimal     @db.Decimal(10, 2)
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  procedure     Procedure   @relation(fields: [procedureId], references: [id])
+
+  @@unique([appointmentId, procedureId])
+  @@index([procedureId], map: "appointment_procedures_procedureId_fkey")
+  @@map("appointment_procedures")
+}
+
+model FinancialTransaction {
+  id          String          @id @default(uuid())
+  type        TransactionType
+  category    String
+  description String
+  amount      Decimal         @db.Decimal(10, 2)
+  date        DateTime
+  isPaid      Boolean         @default(false)
+  dueDate     DateTime?
+  recurrent   Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("financial_transactions")
+}
+
+model Reminder {
+  id          String       @id @default(uuid())
+  type        ReminderType
+  title       String
+  description String?
+  date        DateTime
+  userId      String?
+  clientId    String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  client      Client?      @relation(fields: [clientId], references: [id])
+  user        User?        @relation(fields: [userId], references: [id])
+
+  @@index([clientId], map: "reminders_clientId_fkey")
+  @@index([userId], map: "reminders_userId_fkey")
+  @@map("reminders")
 }
 
 enum UserRole {
@@ -46,179 +209,4 @@ enum ReminderType {
 enum TransactionType {
   RECEITA
   DESPESA
-}
-
-model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  password  String
-  name      String
-  email     String?  @unique
-  phone     String?
-  role      UserRole @default(CABELEIREIRO)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relacionamentos
-  appointments Appointment[]
-  reminders    Reminder[]
-
-  @@map("users")
-}
-
-model Client {
-  id          String    @id @default(uuid())
-  name        String
-  email       String?   @unique
-  phone       String?
-  birthDate   DateTime?
-  address     String?
-  observations String?
-  active      Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  // Relacionamentos
-  appointments Appointment[]
-  reminders    Reminder[]
-
-  @@map("clients")
-}
-
-model Procedure {
-  id          String  @id @default(uuid())
-  name        String
-  description String?
-  duration    Int     // em minutos
-  price       Decimal @db.Decimal(10, 2)
-  active      Boolean @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relacionamentos
-  appointmentProcedures AppointmentProcedure[]
-  procedureProducts     ProcedureProduct[]
-
-  @@map("procedures")
-}
-
-model Product {
-  id           String      @id @default(uuid())
-  name         String
-  description  String?
-  type         ProductType
-  price        Decimal?    @db.Decimal(10, 2) // Para produtos de venda
-  stock        Int         @default(0)
-  minStock     Int         @default(0) // Alerta de estoque baixo
-  unit         String?     // ml, unidade, etc
-  active       Boolean     @default(true)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  // Relacionamentos
-  stockMovements StockMovement[]
-  procedureProducts ProcedureProduct[]
-
-  @@map("products")
-}
-
-model StockMovement {
-  id          String          @id @default(uuid())
-  productId   String
-  type        TransactionType
-  quantity    Int
-  reason      String?
-  createdAt   DateTime        @default(now())
-
-  // Relacionamentos
-  product Product @relation(fields: [productId], references: [id])
-
-  @@map("stock_movements")
-}
-
-model ProcedureProduct {
-  id          String @id @default(uuid())
-  procedureId String
-  productId   String
-  quantity    Int    // Quantidade consumida por procedimento
-
-  // Relacionamentos
-  procedure Procedure @relation(fields: [procedureId], references: [id])
-  product   Product   @relation(fields: [productId], references: [id])
-
-  @@unique([procedureId, productId])
-  @@map("procedure_products")
-}
-
-model Appointment {
-  id            String            @id @default(uuid())
-  clientId      String
-  userId        String
-  date          DateTime
-  startTime     DateTime
-  endTime       DateTime?
-  status        AppointmentStatus @default(AGENDADO)
-  paymentMethod PaymentMethod?
-  totalPrice    Decimal?          @db.Decimal(10, 2)
-  discount      Decimal?          @db.Decimal(10, 2)
-  observations  String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-
-  // Relacionamentos
-  client     Client                 @relation(fields: [clientId], references: [id])
-  user       User                   @relation(fields: [userId], references: [id])
-  procedures AppointmentProcedure[]
-
-  @@map("appointments")
-}
-
-model AppointmentProcedure {
-  id            String @id @default(uuid())
-  appointmentId String
-  procedureId   String
-  price         Decimal @db.Decimal(10, 2)
-
-  // Relacionamentos
-  appointment Appointment @relation(fields: [appointmentId], references: [id])
-  procedure   Procedure   @relation(fields: [procedureId], references: [id])
-
-  @@unique([appointmentId, procedureId])
-  @@map("appointment_procedures")
-}
-
-model FinancialTransaction {
-  id          String          @id @default(uuid())
-  type        TransactionType
-  category    String
-  description String
-  amount      Decimal         @db.Decimal(10, 2)
-  date        DateTime
-  isPaid      Boolean         @default(false)
-  dueDate     DateTime?
-  recurrent   Boolean         @default(false)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-
-  @@map("financial_transactions")
-}
-
-model Reminder {
-  id          String        @id @default(uuid())
-  type        ReminderType
-  title       String
-  description String?
-  date        DateTime
-  userId      String?
-  clientId    String?
-  isActive    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  // Relacionamentos
-  user   User?   @relation(fields: [userId], references: [id])
-  client Client? @relation(fields: [clientId], references: [id])
-
-  @@map("reminders")
 }

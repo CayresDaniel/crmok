@@ -9,14 +9,14 @@
         <div v-if="headerGradient" class="absolute top-0 left-0 w-full h-1" :class="headerGradient"></div>
         
         <!-- Header -->
-        <div v-if="title || icon || $slots.header" class="flex items-center justify-between mb-8">
-          <div class="flex items-center space-x-3">
-            <div v-if="icon" :class="iconWrapperClasses">
-              <component :is="icon" class="w-6 h-6 text-white" />
+        <div v-if="title || icon || $slots.header" class="flex items-start justify-between mb-4 sm:mb-8">
+          <div class="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+            <div v-if="icon" :class="iconWrapperClasses" class="flex-shrink-0">
+              <component :is="icon" class="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div v-if="title || subtitle">
-              <h3 class="text-xl font-semibold text-white">{{ title }}</h3>
-              <p v-if="subtitle" class="text-sm text-gray-400">{{ subtitle }}</p>
+            <div v-if="title || subtitle" class="min-w-0 flex-1">
+              <h3 class="text-lg sm:text-xl font-semibold text-white truncate">{{ title }}</h3>
+              <p v-if="subtitle" class="text-xs sm:text-sm text-gray-400 line-clamp-2">{{ subtitle }}</p>
             </div>
             <slot name="header"></slot>
           </div>
@@ -24,9 +24,9 @@
           <button 
             v-if="closable"
             @click="$emit('close')" 
-            class="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-all duration-200"
+            class="p-1.5 sm:p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-all duration-200 flex-shrink-0 ml-2"
           >
-            <XMarkIcon class="w-6 h-6" />
+            <XMarkIcon class="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
         
@@ -36,7 +36,7 @@
         </div>
         
         <!-- Footer -->
-        <div v-if="$slots.footer" class="pt-6 border-t border-gray-700/50">
+        <div v-if="$slots.footer" class="pt-4 sm:pt-6 border-t border-gray-700/50">
           <slot name="footer"></slot>
         </div>
       </div>
@@ -92,14 +92,14 @@ const props = defineProps({
 const emit = defineEmits(['close', 'opened', 'closed'])
 
 const modalClasses = computed(() => {
-  const base = 'modal-enhanced relative overflow-hidden'
+  const base = 'modal-enhanced relative overflow-hidden w-full'
   
   const sizes = {
-    xs: 'max-w-xs',
-    sm: 'max-w-sm', 
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
+    xs: 'max-w-xs mx-4',
+    sm: 'max-w-sm mx-4', 
+    md: 'max-w-md mx-4',
+    lg: 'max-w-lg mx-4',
+    xl: 'max-w-xl mx-4',
     full: 'max-w-full mx-4'
   }
   
@@ -166,8 +166,15 @@ onUnmounted(() => {
 
 <style scoped>
 .modal-content {
-  max-height: 70vh;
+  flex: 1;
   overflow-y: auto;
+  min-height: 0;
+}
+
+@media (max-height: 640px) {
+  .modal-content {
+    max-height: 50vh;
+  }
 }
 
 /* Custom scrollbar for modal content */
@@ -187,5 +194,11 @@ onUnmounted(() => {
 
 .modal-content::-webkit-scrollbar-thumb:hover {
   background: rgba(99, 102, 241, 0.7);
+}
+
+/* Better touch scrolling on mobile */
+.modal-content {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 </style>

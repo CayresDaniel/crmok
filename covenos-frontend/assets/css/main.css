@@ -229,9 +229,19 @@
 
   /* Modais Facebook Style */
   .modal-backdrop {
-    @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+    @apply fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4;
     background: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(8px);
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    overflow-y: auto;
+  }
+  
+  @media (min-width: 640px) {
+    .modal-backdrop {
+      padding-top: 2rem;
+      padding-bottom: 2rem;
+    }
   }
   
   .modal {
@@ -311,13 +321,21 @@
   }
   
   .form-input {
-    @apply w-full px-4 py-4 text-gray-100 placeholder-gray-400 transition-all duration-300 focus:outline-none;
+    @apply w-full px-3 py-3 text-gray-100 placeholder-gray-400 transition-all duration-300 focus:outline-none;
     background: rgba(17, 24, 39, 0.8);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(55, 65, 81, 0.4);
-    border-radius: 16px;
-    font-size: 15px;
+    border-radius: 12px;
+    font-size: 14px;
     font-weight: 400;
+  }
+  
+  @media (min-width: 640px) {
+    .form-input {
+      padding: 16px;
+      border-radius: 16px;
+      font-size: 15px;
+    }
   }
   
   .form-input:focus {
@@ -359,8 +377,8 @@
     background: rgba(17, 24, 39, 0.98);
     backdrop-filter: blur(24px);
     border: 1px solid rgba(55, 65, 81, 0.3);
-    border-radius: 24px;
-    padding: 32px;
+    border-radius: 16px;
+    padding: 16px;
     box-shadow: 
       0 25px 50px rgba(0, 0, 0, 0.6),
       0 0 40px rgba(99, 102, 241, 0.1),
@@ -368,6 +386,24 @@
     max-width: 520px;
     width: 100%;
     animation: modalEnhancedIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  @media (min-width: 640px) {
+    .modal-enhanced {
+      border-radius: 24px;
+      padding: 32px;
+      max-height: 85vh;
+    }
+  }
+  
+  @media (max-height: 640px) {
+    .modal-enhanced {
+      max-height: 95vh;
+    }
   }
   
   @keyframes modalEnhancedIn {

@@ -169,167 +169,153 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <div v-if="showCreateModal || editingUser" class="modal-backdrop">
-      <div class="modal-enhanced relative overflow-hidden">
-        <!-- Modal header with gradient -->
-        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
-        
-        <div class="flex items-center justify-between mb-8">
-          <div class="flex items-center space-x-3">
-            <div class="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl">
-              <UserPlusIcon class="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 class="text-xl font-semibold text-white">
-                {{ editingUser ? 'Editar Usuário' : 'Novo Usuário' }}
-              </h3>
-              <p class="text-sm text-gray-400">
-                {{ editingUser ? 'Atualize as informações do usuário' : 'Preencha os dados do novo usuário' }}
-              </p>
-            </div>
-          </div>
-          <button @click="closeModal" class="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-all duration-200">
-            <XMarkIcon class="w-6 h-6" />
-          </button>
+    <Modal 
+      :show="showCreateModal || !!editingUser"
+      @close="closeModal"
+      :title="editingUser ? 'Editar Usuário' : 'Novo Usuário'"
+      :subtitle="editingUser ? 'Atualize as informações do usuário' : 'Preencha os dados do novo usuário'"
+      :icon="UserPlusIcon"
+      size="lg"
+      variant="default"
+    >
+      <form @submit.prevent="saveUser" class="space-y-6">
+        <div class="form-group">
+          <label class="form-label">
+            <UserIcon class="w-4 h-4" />
+            Username *
+          </label>
+          <input
+            v-model="userForm.username"
+            type="text"
+            required
+            class="form-input"
+            placeholder="Nome de usuário para login"
+          />
         </div>
         
-        <form @submit.prevent="saveUser" class="space-y-6">
-          <div class="form-group">
-            <label class="form-label">
-              <UserIcon class="w-4 h-4" />
-              Username *
-            </label>
-            <input
-              v-model="userForm.username"
-              type="text"
-              required
-              class="form-input"
-              placeholder="Nome de usuário para login"
-            />
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">
-              <UserIcon class="w-4 h-4" />
-              Nome Completo *
-            </label>
-            <input
-              v-model="userForm.name"
-              type="text"
-              required
-              class="form-input"
-              placeholder="Nome completo do usuário"
-            />
-          </div>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="form-group">
-              <label class="form-label">
-                <AtSymbolIcon class="w-4 h-4" />
-                Email *
-              </label>
-              <input
-                v-model="userForm.email"
-                type="email"
-                required
-                class="form-input"
-                placeholder="email@exemplo.com"
-              />
-            </div>
-            <div class="form-group">
-              <label class="form-label">
-                <PhoneIcon class="w-4 h-4" />
-                Telefone
-              </label>
-              <input
-                v-model="userForm.phone"
-                type="tel"
-                class="form-input"
-                placeholder="(11) 99999-9999"
-              />
-            </div>
-          </div>
-          
-          <div v-if="!editingUser" class="form-group">
-            <label class="form-label">
-              <LockClosedIcon class="w-4 h-4" />
-              Senha *
-            </label>
-            <input
-              v-model="userForm.password"
-              type="password"
-              required
-              class="form-input"
-              placeholder="Digite uma senha segura"
-            />
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">
-              <BriefcaseIcon class="w-4 h-4" />
-              Cargo *
-            </label>
-            <select v-model="userForm.role" required class="form-input">
-              <option value="">Selecione o cargo</option>
-              <option value="ADMIN">Administrador</option>
-              <option value="CABELEIREIRO">Cabeleireiro</option>
-            </select>
-          </div>
-          
-          
-          <div class="flex justify-end space-x-4 pt-6 border-t border-gray-700/50">
-            <button type="button" @click="closeModal" class="btn-secondary px-6 py-3">
-              <XMarkIcon class="w-4 h-4 mr-2" />
-              Cancelar
-            </button>
-            <button type="submit" class="btn-primary px-6 py-3" :disabled="saving">
-              <div v-if="saving" class="flex items-center">
-                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Salvando...
-              </div>
-              <div v-else class="flex items-center">
-                <CheckIcon class="w-4 h-4 mr-2" />
-                Salvar
-              </div>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div v-if="userToDelete" class="modal-backdrop">
-      <div class="modal-enhanced max-w-md relative overflow-hidden">
-        <!-- Danger indicator -->
-        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-red-600"></div>
-        
-        <div class="text-center mb-8">
-          <div class="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
-            <ExclamationTriangleIcon class="w-8 h-8 text-red-600 dark:text-red-400" />
-          </div>
-          <h3 class="text-xl font-semibold text-white mb-2">Confirmar Exclusão</h3>
-          <p class="text-gray-400 leading-relaxed">
-            Tem certeza que deseja excluir o usuário 
-            <span class="font-semibold text-white">{{ userToDelete.name }}</span>?
-          </p>
-          <p class="text-sm text-red-400 mt-2 font-medium">
-            Esta ação não pode ser desfeita.
-          </p>
+        <div class="form-group">
+          <label class="form-label">
+            <UserIcon class="w-4 h-4" />
+            Nome Completo *
+          </label>
+          <input
+            v-model="userForm.name"
+            type="text"
+            required
+            class="form-input"
+            placeholder="Nome completo do usuário"
+          />
         </div>
         
-        <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4 pt-6 border-t border-gray-700/50">
-          <button @click="userToDelete = null" class="btn-secondary px-6 py-3 order-2 sm:order-1">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+          <div class="form-group">
+            <label class="form-label">
+              <AtSymbolIcon class="w-4 h-4" />
+              Email *
+            </label>
+            <input
+              v-model="userForm.email"
+              type="email"
+              required
+              class="form-input"
+              placeholder="email@exemplo.com"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <PhoneIcon class="w-4 h-4" />
+              Telefone
+            </label>
+            <input
+              v-model="userForm.phone"
+              type="tel"
+              class="form-input"
+              placeholder="(11) 99999-9999"
+            />
+          </div>
+        </div>
+        
+        <div v-if="!editingUser" class="form-group">
+          <label class="form-label">
+            <LockClosedIcon class="w-4 h-4" />
+            Senha *
+          </label>
+          <input
+            v-model="userForm.password"
+            type="password"
+            required
+            class="form-input"
+            placeholder="Digite uma senha segura"
+          />
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">
+            <BriefcaseIcon class="w-4 h-4" />
+            Cargo *
+          </label>
+          <select v-model="userForm.role" required class="form-input">
+            <option value="">Selecione o cargo</option>
+            <option value="ADMIN">Administrador</option>
+            <option value="CABELEIREIRO">Cabeleireiro</option>
+          </select>
+        </div>
+        
+        <div class="flex flex-col-reverse sm:flex-row justify-end space-y-reverse space-y-3 sm:space-y-0 sm:space-x-4 pt-4 sm:pt-6 border-t border-gray-700/50">
+          <button type="button" @click="closeModal" class="btn-secondary px-4 sm:px-6 py-3 w-full sm:w-auto">
             <XMarkIcon class="w-4 h-4 mr-2" />
             Cancelar
           </button>
-          <button @click="deleteUser" class="btn-danger px-6 py-3 order-1 sm:order-2" :disabled="deleting">
+          <button type="submit" class="btn-primary px-4 sm:px-6 py-3 w-full sm:w-auto" :disabled="saving">
+            <div v-if="saving" class="flex items-center justify-center">
+              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Salvando...
+            </div>
+            <div v-else class="flex items-center justify-center">
+              <CheckIcon class="w-4 h-4 mr-2" />
+              Salvar
+            </div>
+          </button>
+        </div>
+      </form>
+    </Modal>
+
+    <!-- Delete Confirmation Modal -->
+    <Modal 
+      :show="!!userToDelete"
+      @close="userToDelete = null"
+      title="Confirmar Exclusão"
+      :icon="ExclamationTriangleIcon"
+      size="sm"
+      variant="danger"
+    >
+      <div class="text-center mb-6">
+        <div class="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
+          <ExclamationTriangleIcon class="w-8 h-8 text-red-600 dark:text-red-400" />
+        </div>
+        <p class="text-gray-400 leading-relaxed">
+          Tem certeza que deseja excluir o usuário 
+          <span class="font-semibold text-white">{{ userToDelete?.name }}</span>?
+        </p>
+        <p class="text-sm text-red-400 mt-2 font-medium">
+          Esta ação não pode ser desfeita.
+        </p>
+      </div>
+      
+      <template #footer>
+        <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
+          <button @click="userToDelete = null" class="btn-secondary px-4 sm:px-6 py-3 order-2 sm:order-1 w-full sm:w-auto">
+            <XMarkIcon class="w-4 h-4 mr-2" />
+            Cancelar
+          </button>
+          <button @click="deleteUser" class="btn-danger px-4 sm:px-6 py-3 order-1 sm:order-2 w-full sm:w-auto" :disabled="deleting">
             <div v-if="deleting" class="flex items-center justify-center">
               <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
               Excluindo...
             </div>
@@ -339,8 +325,8 @@
             </div>
           </button>
         </div>
-      </div>
-    </div>
+      </template>
+    </Modal>
   </div>
 </template>
 
@@ -366,23 +352,24 @@ definePageMeta({
 
 useSeoMeta({
   title: 'Usuários - Coven Beauty',
-  description: 'Gerenciamento de usuários e funcionários'
+  description: 'Gerencie usuários do sistema'
 })
 
-// Estado
+// State
 const users = ref([])
+const showCreateModal = ref(false)
+const editingUser = ref(null)
+const userToDelete = ref(null)
 const loading = ref(true)
 const saving = ref(false)
 const deleting = ref(false)
 
+// Search and filters
 const searchTerm = ref('')
 const roleFilter = ref('')
 const statusFilter = ref('')
 
-const showCreateModal = ref(false)
-const editingUser = ref(null)
-const userToDelete = ref(null)
-
+// Form data
 const userForm = reactive({
   username: '',
   name: '',
@@ -397,10 +384,11 @@ const filteredUsers = computed(() => {
   let filtered = users.value
 
   if (searchTerm.value) {
-    const term = searchTerm.value.toLowerCase()
-    filtered = filtered.filter(user =>
-      user.name.toLowerCase().includes(term) ||
-      user.email.toLowerCase().includes(term)
+    const search = searchTerm.value.toLowerCase()
+    filtered = filtered.filter(user => 
+      user.name.toLowerCase().includes(search) ||
+      user.email.toLowerCase().includes(search) ||
+      user.username?.toLowerCase().includes(search)
     )
   }
 
@@ -409,56 +397,22 @@ const filteredUsers = computed(() => {
   }
 
   if (statusFilter.value !== '') {
-    filtered = filtered.filter(user => 
-      user.active.toString() === statusFilter.value
-    )
+    const isActive = statusFilter.value === 'true'
+    filtered = filtered.filter(user => user.active === isActive)
   }
 
-  return filtered.sort((a, b) => a.name.localeCompare(b.name))
+  return filtered
 })
 
 const activeUsers = computed(() => {
-  return users.value.filter(user => user.active).length
+  return users.value.filter(user => user.active !== false).length
 })
 
 const hairdressers = computed(() => {
   return users.value.filter(user => user.role === 'CABELEIREIRO').length
 })
 
-// Métodos
-const getRoleText = (role) => {
-  const roles = {
-    ADMIN: 'Administrador',
-    CABELEIREIRO: 'Cabeleireiro'
-  }
-  return roles[role] || role
-}
-
-const getRoleBadge = (role) => {
-  const badges = {
-    ADMIN: 'badge-error',
-    CABELEIREIRO: 'badge-info'
-  }
-  return badges[role] || 'badge-secondary'
-}
-
-const loadUsers = async () => {
-  try {
-    const { $api } = useNuxtApp()
-    
-    const response = await $api('/users', {
-      method: 'GET'
-    })
-    
-    // A resposta pode vir diretamente como array ou em response.data
-    users.value = Array.isArray(response) ? response : (response.data || [])
-  } catch (error) {
-    console.error('Erro ao carregar usuários:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
+// Methods
 const resetForm = () => {
   Object.assign(userForm, {
     username: '',
@@ -470,92 +424,110 @@ const resetForm = () => {
   })
 }
 
-const editUser = (user) => {
-  editingUser.value = user
-  Object.assign(userForm, {
-    username: user.username,
-    name: user.name,
-    email: user.email,
-    phone: user.phone || '',
-    password: '', // Senha não é editável
-    role: user.role
-  })
-  showCreateModal.value = false
-}
-
 const closeModal = () => {
   showCreateModal.value = false
   editingUser.value = null
   resetForm()
 }
 
-const saveUser = async () => {
-  saving.value = true
-  
-  try {
-    const { $api } = useNuxtApp()
-    const toast = useToast()
-    
-    const method = editingUser.value ? 'PATCH' : 'POST'
-    const url = editingUser.value ? `/users/${editingUser.value.id}` : '/users'
-    
-    // Preparar dados conforme o DTO do backend
-    const userData = {
-      username: userForm.username.trim(),
-      name: userForm.name.trim()
-    }
-    
-    // Adicionar campos opcionais apenas se tiverem valor
-    if (userForm.email && userForm.email.trim()) {
-      userData.email = userForm.email.trim()
-    }
-    
-    if (userForm.phone && userForm.phone.trim()) {
-      userData.phone = userForm.phone.trim()
-    }
-    
-    if (userForm.role) {
-      userData.role = userForm.role
-    }
-    
-    // Adicionar senha apenas para criação
-    if (!editingUser.value && userForm.password && userForm.password.trim()) {
-      userData.password = userForm.password.trim()
-    }
-    
-    await $api(url, {
-      method,
-      body: userData
-    })
-    
-    await loadUsers()
-    closeModal()
-    
-    toast.success(
-      editingUser.value ? 'Usuário atualizado com sucesso!' : 'Usuário criado com sucesso!'
-    )
-  } catch (error) {
-    console.error('Erro ao salvar usuário:', error)
-    const toast = useToast()
-    const errorMessage = error.response?.data?.message || 'Erro ao salvar usuário'
-    toast.error(Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage)
-  } finally {
-    saving.value = false
-  }
+const editUser = (user) => {
+  editingUser.value = user
+  Object.assign(userForm, {
+    username: user.username || '',
+    name: user.name || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    password: '',
+    role: user.role || ''
+  })
 }
 
 const confirmDelete = (user) => {
   userToDelete.value = user
 }
 
-const deleteUser = async () => {
-  deleting.value = true
-  
+const getRoleBadge = (role) => {
+  const badges = {
+    ADMIN: 'badge-info',
+    CABELEIREIRO: 'badge-success'
+  }
+  return badges[role] || 'badge-secondary'
+}
+
+const getRoleText = (role) => {
+  const texts = {
+    ADMIN: 'Administrador',
+    CABELEIREIRO: 'Cabeleireiro'
+  }
+  return texts[role] || role
+}
+
+const loadUsers = async () => {
   try {
     const { $api } = useNuxtApp()
+    const token = useCookie('covenos-token')
+    
+    const response = await $api('/users', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token.value}`
+      }
+    })
+    
+    users.value = response.data || []
+  } catch (error) {
+    console.error('Erro ao carregar usuários:', error)
+    users.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+const saveUser = async () => {
+  try {
+    saving.value = true
+    const { $api } = useNuxtApp()
+    const token = useCookie('covenos-token')
+    
+    const url = editingUser.value ? `/users/${editingUser.value.id}` : '/users'
+    const method = editingUser.value ? 'PUT' : 'POST'
+    
+    const payload = { ...userForm }
+    if (editingUser.value && !payload.password) {
+      delete payload.password
+    }
+    
+    await $api(url, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${token.value}`,
+        'Content-Type': 'application/json'
+      },
+      body: payload
+    })
+    
+    await loadUsers()
+    closeModal()
+  } catch (error) {
+    console.error('Erro ao salvar usuário:', error)
+  } finally {
+    saving.value = false
+  }
+}
+
+const deleteUser = async () => {
+  if (!userToDelete.value) return
+  
+  try {
+    deleting.value = true
+    const { $api } = useNuxtApp()
+    const token = useCookie('covenos-token')
     
     await $api(`/users/${userToDelete.value.id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token.value}`
+      }
     })
     
     await loadUsers()

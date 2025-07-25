@@ -9,7 +9,7 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PaymentMethod } from '@prisma/client';
+import { PaymentMethod, AppointmentStatus } from '@prisma/client';
 
 export class CreateAppointmentDto {
   @IsString()
@@ -26,9 +26,17 @@ export class CreateAppointmentDto {
   @IsDateString()
   startTime: string;
 
+  @IsDateString()
+  @IsOptional()
+  endTime?: string;
+
   @IsArray()
   @IsString({ each: true })
   procedureIds: string[];
+
+  @IsEnum(AppointmentStatus)
+  @IsOptional()
+  status?: AppointmentStatus;
 
   @IsEnum(PaymentMethod)
   @IsOptional()

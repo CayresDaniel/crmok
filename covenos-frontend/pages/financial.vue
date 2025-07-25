@@ -227,7 +227,7 @@
               </td>
               <td class="py-4 px-6">
                 <p class="text-sm font-medium text-white">{{ transaction.description }}</p>
-                <p v-if="transaction.notes" class="text-xs text-gray-400 mt-1">{{ transaction.notes }}</p>
+                <p v-if="transaction.description" class="text-xs text-gray-400 mt-1">{{ transaction.description }}</p>
               </td>
               <td class="py-4 px-6">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-medium bg-gray-800 text-gray-300">
@@ -315,8 +315,8 @@
                     <label class="block text-sm font-medium text-gray-300 mb-2">Tipo *</label>
                     <select v-model="transactionForm.type" required class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors">
                       <option value="">Selecione o tipo</option>
-                      <option value="INCOME">Receita</option>
-                      <option value="EXPENSE">Despesa</option>
+                      <option value="RECEITA">Receita</option>
+                      <option value="DESPESA">Despesa</option>
                     </select>
                   </div>
                   
@@ -378,7 +378,7 @@
                 <div>
                   <label class="block text-sm font-medium text-gray-300 mb-2">Observações</label>
                   <textarea
-                    v-model="transactionForm.notes"
+                    v-model="transactionForm.description"
                     rows="3"
                     class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors resize-none"
                     placeholder="Observações sobre a transação..."
@@ -525,8 +525,7 @@ const transactionForm = reactive({
   date: new Date().toISOString().split('T')[0],
   description: '',
   category: '',
-  amount: '',
-  notes: '', // O campo 'notes' estava faltando no reset e na edição
+  amount: ''
 })
 
 // Computed
@@ -575,7 +574,7 @@ const filteredTransactions = computed(() => {
     const term = searchTerm.value.toLowerCase()
     filtered = filtered.filter(transaction =>
       transaction.description.toLowerCase().includes(term) ||
-      transaction.notes?.toLowerCase().includes(term)
+      transaction.category?.toLowerCase().includes(term)
     )
   }
 
@@ -668,13 +667,11 @@ const loadTransactions = async () => {
 const resetForm = () => {
   Object.assign(transactionForm, {
     id: null,
-    // FIX: O tipo na API é 'RECEITA'/'DESPESA'
     type: 'RECEITA',
     date: new Date().toISOString().split('T')[0],
     description: '',
     category: '',
-    amount: '',
-    notes: ''
+    amount: ''
   })
 }
 
@@ -682,9 +679,7 @@ const editTransaction = (transaction) => {
   editingTransaction.value = transaction
   Object.assign(transactionForm, {
     ...transaction,
-    date: transaction.date.split('T')[0],
-    // FIX: Garante que o campo 'notes' seja preenchido na edição
-    notes: transaction.notes || ''
+    date: transaction.date.split('T')[0]
   })
   showCreateModal.value = true
 }

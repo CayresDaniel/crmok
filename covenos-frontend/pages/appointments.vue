@@ -278,46 +278,23 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition ease-out duration-200"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition ease-in duration-150"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div v-if="showCreateModal || editingAppointment" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <Transition
-            enter-active-class="transition ease-out duration-200"
-            enter-from-class="opacity-0 scale-95"
-            enter-to-class="opacity-100 scale-100"
-            leave-active-class="transition ease-in duration-150"
-            leave-from-class="opacity-100 scale-100"
-            leave-to-class="opacity-0 scale-95"
-          >
-            <div class="bg-gray-900 border border-gray-800 rounded-xl shadow-xl w-full max-w-2xl my-8">
-              <!-- Modal Header -->
-              <div class="flex items-center justify-between p-6 border-b border-gray-800">
-                <div class="flex items-center space-x-3">
-                  <div class="p-2 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg">
-                    <CalendarIcon class="w-5 h-5 text-white" />
-                  </div>
-                  <h3 class="text-xl font-semibold text-white">
-                    {{ editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento' }}
-                  </h3>
-                </div>
-                <button @click="closeModal" class="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
-                  <XMarkIcon class="w-5 h-5" />
-                </button>
-              </div>
-              
-              <!-- Modal Body -->
-              <form @submit.prevent="saveAppointment" class="p-6 space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Cliente *</label>
-                    <select v-model="appointmentForm.clientId" required class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors">
+    <Modal 
+          :show="showCreateModal || !!editingAppointment"
+          @close="closeModal"
+          :title="editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'"
+          :subtitle="editingAppointment ? 'Atualize as informações do agendamento' : 'Preencha os dados do novo agendamento'"
+          :icon="CalendarIcon"
+          size="xl"
+          variant="default"
+        >
+          <form @submit.prevent="saveAppointment" class="space-y-4 sm:space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <UserIcon class="w-4 h-4" />
+                      Cliente *
+                    </label>
+                    <select v-model="appointmentForm.clientId" required class="form-input">
                       <option value="">Selecione um cliente</option>
                       <option v-for="client in clients" :key="client.id" :value="client.id">
                         {{ client.name }}
@@ -325,9 +302,12 @@
                     </select>
                   </div>
                   
-                  <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Profissional</label>
-                    <select v-model="appointmentForm.userId" class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <UserIcon class="w-4 h-4" />
+                      Profissional
+                    </label>
+                    <select v-model="appointmentForm.userId" class="form-input">
                       <option value="">Selecione um profissional</option>
                       <option v-for="user in hairdressers" :key="user.id" :value="user.id">
                         {{ user.name }}
@@ -336,66 +316,81 @@
                   </div>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Data *</label>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <CalendarIcon class="w-4 h-4" />
+                      Data *
+                    </label>
                     <input
                       v-model="appointmentForm.date"
                       type="date"
                       required
-                      class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
+                      class="form-input"
                     />
                   </div>
                   
-                  <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Hora Início *</label>
+                  <div class="form-group">
+                    <label class="form-label">
+                      <ClockIcon class="w-4 h-4" />
+                      Hora Início *
+                    </label>
                     <input
                       v-model="appointmentForm.startTime"
                       type="time"
                       required
-                      class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
+                      class="form-input"
                     />
                   </div>
                   
-                  <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Hora Fim *</label>
+                  <div class="form-group">
+                    <label class="form-label">
+                      <ClockIcon class="w-4 h-4" />
+                      Hora Fim *
+                    </label>
                     <input
                       v-model="appointmentForm.endTime"
                       type="time"
                       required
-                      class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
+                      class="form-input"
                     />
                   </div>
                 </div>
                 
-                <div>
-                  <label class="block text-sm font-medium text-gray-300 mb-2">Procedimentos</label>
-                  <div class="max-h-32 overflow-y-auto border border-gray-700 rounded-lg p-3 bg-gray-800/30">
-                    <div class="space-y-2">
+                <div class="form-group">
+                  <label class="form-label">
+                    <CubeIcon class="w-4 h-4" />
+                    Procedimentos
+                  </label>
+                  <div class="max-h-32 sm:max-h-40 overflow-y-auto border border-gray-700 rounded-lg p-2 sm:p-3 bg-gray-800/30">
+                    <div class="space-y-1 sm:space-y-2">
                       <label
                         v-for="procedure in procedures"
                         :key="procedure.id"
-                        class="flex items-center space-x-3 cursor-pointer hover:bg-gray-700/50 p-2 rounded transition-colors"
+                        class="flex items-center space-x-2 sm:space-x-3 cursor-pointer hover:bg-gray-700/50 p-1.5 sm:p-2 rounded transition-colors"
                       >
                         <input
                           type="checkbox"
                           :value="procedure.id"
                           v-model="appointmentForm.procedureIds"
-                          class="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500"
+                          class="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 flex-shrink-0"
                         />
-                        <div class="flex-1 flex items-center justify-between">
-                          <span class="text-white">{{ procedure.name }}</span>
-                          <span class="text-sm text-purple-400">{{ formatCurrency(procedure.price) }}</span>
+                        <div class="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between min-w-0">
+                          <span class="text-white text-sm font-medium truncate">{{ procedure.name }}</span>
+                          <span class="text-xs sm:text-sm text-purple-400 font-semibold">{{ formatCurrency(procedure.price) }}</span>
                         </div>
                       </label>
                     </div>
                   </div>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Status</label>
-                    <select v-model="appointmentForm.status" class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <CheckCircleIcon class="w-4 h-4" />
+                      Status
+                    </label>
+                    <select v-model="appointmentForm.status" class="form-input">
                       <option value="AGENDADO">Agendado</option>
                       <option value="EM_ANDAMENTO">Em Andamento</option>
                       <option value="CONCLUIDO">Concluído</option>
@@ -404,9 +399,12 @@
                     </select>
                   </div>
                   
-                  <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Método de Pagamento</label>
-                    <select v-model="appointmentForm.paymentMethod" class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <CreditCardIcon class="w-4 h-4" />
+                      Método de Pagamento
+                    </label>
+                    <select v-model="appointmentForm.paymentMethod" class="form-input">
                       <option value="">Selecione</option>
                       <option value="DINHEIRO">Dinheiro</option>
                       <option value="CARTAO_DEBITO">Cartão de Débito</option>
@@ -418,25 +416,34 @@
                 </div>
                 
                 <!-- Seção de Preços -->
-                <div class="bg-gray-800/30 border border-gray-700 rounded-lg p-4 space-y-3">
-                  <h4 class="text-sm font-semibold text-gray-300 mb-3">💰 Valores</h4>
+                <div class="bg-gray-800/30 border border-gray-700 rounded-lg p-3 sm:p-4 space-y-3">
+                  <h4 class="text-sm font-semibold text-gray-300 mb-3 flex items-center">
+                    <CurrencyDollarIcon class="w-4 h-4 mr-2" />
+                    Valores
+                  </h4>
                   
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label class="block text-sm font-medium text-gray-300 mb-2">Desconto (R$)</label>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div class="form-group">
+                      <label class="form-label">
+                        <TagIcon class="w-4 h-4" />
+                        Desconto (R$)
+                      </label>
                       <input
                         v-model="appointmentForm.discount"
                         type="number"
                         min="0"
                         step="0.01"
-                        class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
+                        class="form-input"
                         placeholder="0,00"
                       />
                     </div>
                     
-                    <div>
-                      <label class="block text-sm font-medium text-gray-300 mb-2">Total</label>
-                      <div class="w-full px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white font-semibold text-lg">
+                    <div class="form-group">
+                      <label class="form-label">
+                        <CalculatorIcon class="w-4 h-4" />
+                        Total
+                      </label>
+                      <div class="w-full px-3 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white font-semibold text-base sm:text-lg">
                         {{ formatCurrency(calculatedTotalPrice) }}
                       </div>
                       <p v-if="appointmentForm.procedureIds.length === 0" class="text-xs text-gray-400 mt-1">
@@ -468,23 +475,27 @@
                   </div>
                 </div>
                 
-                <div>
-                  <label class="block text-sm font-medium text-gray-300 mb-2">Observações</label>
+                <div class="form-group">
+                  <label class="form-label">
+                    <DocumentTextIcon class="w-4 h-4" />
+                    Observações
+                  </label>
                   <textarea
                     v-model="appointmentForm.observations"
                     rows="3"
-                    class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors resize-none"
+                    class="form-input resize-none"
                     placeholder="Anotações sobre o agendamento..."
                   ></textarea>
                 </div>
                 
                 <!-- Modal Footer -->
-                <div class="flex justify-end space-x-3 pt-4">
+                <div class="flex flex-col-reverse sm:flex-row justify-end space-y-reverse space-y-3 sm:space-y-0 sm:space-x-4 pt-4 sm:pt-6 border-t border-gray-700/50">
                   <button 
                     type="button" 
                     @click="closeModal" 
-                    class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+                    class="btn-secondary px-4 sm:px-6 py-3 w-full sm:w-auto"
                   >
+                    <XMarkIcon class="w-4 h-4 mr-2" />
                     Cancelar
                   </button>
                   <button 
@@ -505,11 +516,7 @@
                   </button>
                 </div>
               </form>
-            </div>
-          </Transition>
-        </div>
-      </Transition>
-    </Teleport>
+        </Modal>
 
     <!-- Delete Confirmation Modal -->
     <Teleport to="body">
@@ -654,6 +661,12 @@ import {
   PencilIcon,
   TrashIcon,
   XMarkIcon,
+  CheckIcon,
+  CubeIcon,
+  CreditCardIcon,
+  TagIcon,
+  CalculatorIcon,
+  DocumentTextIcon,
   ExclamationTriangleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,

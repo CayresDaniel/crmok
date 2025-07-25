@@ -17,6 +17,10 @@ export class CreateProcedureDto {
   @IsOptional()
   description?: string;
 
+  @IsString()
+  @IsOptional()
+  category?: string;
+
   @IsNumber()
   @Type(() => Number)
   @Min(1)
