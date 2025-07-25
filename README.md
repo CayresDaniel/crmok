@@ -180,3 +180,57 @@ NUXT_PUBLIC_API_BASE=http://localhost:3009
 ## 📄 Licença
 
 Este projeto está sob a licença MIT.
+
+
+
+  DATABASE_URL="mysql://coven_user:JulianaDaniel@2409!@localhost:3306/coven"
+  NODE_ENV=production
+  PORT=3009
+
+  cat > create-admin.js << 'EOF'
+  const { PrismaClient } = require('@prisma/client');
+  const bcrypt = require('bcrypt');
+
+  async function createAdmin() {
+    const prisma = new PrismaClient();
+
+    try {
+      const hashedPassword = await bcrypt.hash('@D4n63rl0l', 10);
+
+      const user = await prisma.user.create({
+        data: {
+          username: 'cayres',
+          name: 'Administrador',
+          email: 'admin@covenos.com.br',
+          password: hashedPassword,
+          role: 'ADMIN',
+          active: true
+        }
+      });
+
+      console.log('✅ Usuário admin criado:', user);
+    } catch (error) {
+      console.error('❌ Erro:', error.message);
+    } finally {
+      await prisma.$disconnect();
+    }
+  }
+
+  createAdmin();
+  EOF
+
+  INSERT INTO users (id, username, name, email, password, role, active, createdAt, updatedAt)     
+
+  VALUES (
+    UUID(),
+    'cayres',
+    'Administrador',
+    'admin@covenos.com.br',
+    '$2b$10$G5zqiU79YYuZOR1mji92GOUwnOqSms6Zfa41s2M9PMnx1zB09x..q',
+    'ADMIN',
+    1,
+    NOW(),
+    NOW()
+  );
+
+  $2b$10$G5zqiU79YYuZOR1mji92GOUwnOqSms6Zfa41s2M9PMnx1zB09x..q

@@ -6,10 +6,13 @@ export default defineNuxtPlugin(() => {
   // Criar instância do axios
   const api = axios.create({
     baseURL: config.public.apiBase,
-    timeout: 30000,
+    timeout: 10000, // Reduzir timeout para falhar mais rápido
     headers: {
       'Content-Type': 'application/json'
-    }
+    },
+    // Tentar reconectar automaticamente
+    retry: 3,
+    retryDelay: 1000
   })
 
   // Interceptor para incluir token automaticamente
@@ -21,10 +24,27 @@ export default defineNuxtPlugin(() => {
     return config
   })
 
-  // Interceptor para lidar com erros de autenticação
+  // Interceptor para lidar com erros de autenticação e reconexão
   api.interceptors.response.use(
     (response) => response,
-    (error) => {
+    async (error) => {
+      const originalRequest = error.config
+      
+      // Se é erro de conexão (backend caiu), tentar novamente
+      if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK' || !error.response) {
+        if (!originalRequest._retry && originalRequest._retryCount < 3) {
+          originalRequest._retry = true
+          originalRequest._retryCount = (originalRequest._retryCount || 0) + 1
+          
+          console.log(`🔄 Tentativa ${originalRequest._retryCount}/3 de reconexão...`)
+          
+          // Aguardar antes de tentar novamente
+          await new Promise(resolve => setTimeout(resolve, 2000 * originalRequest._retryCount))
+          
+          return api(originalRequest)
+        }
+      }
+      
       if (error.response?.status === 401) {
         // Token expirado ou inválido
         const token = useCookie('covenos-token')
@@ -36,6 +56,7 @@ export default defineNuxtPlugin(() => {
           window.location.href = '/login'
         }
       }
+      
       return Promise.reject(error)
     }
   )
