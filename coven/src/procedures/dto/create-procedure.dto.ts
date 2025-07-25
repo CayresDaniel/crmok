@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsPositive,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -17,6 +18,7 @@ export class CreateProcedureDto {
   @IsOptional()
   description?: string;
 
+  @ValidateIf((o) => o.category !== '')
   @IsString()
   @IsOptional()
   category?: string;
