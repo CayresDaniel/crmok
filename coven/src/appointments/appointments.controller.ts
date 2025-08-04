@@ -74,4 +74,52 @@ export class AppointmentsController {
   remove(@Param('id') id: string) {
     return this.appointmentsService.remove(id);
   }
+
+  // ===== ROTAS DE COMANDA =====
+
+  @Patch(':id/confirm')
+  confirmAppointment(@Param('id') id: string) {
+    return this.appointmentsService.confirmAppointment(id);
+  }
+
+  @Patch(':id/open-comanda')
+  openComanda(@Param('id') id: string) {
+    return this.appointmentsService.openComanda(id);
+  }
+
+  @Post(':id/products')
+  addProductToComanda(
+    @Param('id') appointmentId: string,
+    @Body() body: { productId: string; quantity: number }
+  ) {
+    return this.appointmentsService.addProductToComanda(
+      appointmentId,
+      body.productId,
+      body.quantity
+    );
+  }
+
+  @Post(':id/procedures')
+  addProcedureToComanda(
+    @Param('id') appointmentId: string,
+    @Body() body: { procedureId: string; price?: number }
+  ) {
+    return this.appointmentsService.addProcedureToComanda(
+      appointmentId,
+      body.procedureId,
+      body.price
+    );
+  }
+
+  @Post(':id/finish')
+  finishComanda(
+    @Param('id') appointmentId: string,
+    @Body() finishData: {
+      paymentMethod: string;
+      discount?: number;
+      finalPrice?: number;
+    }
+  ) {
+    return this.appointmentsService.finishComanda(appointmentId, finishData);
+  }
 }

@@ -68,7 +68,7 @@ export interface Appointment {
   date: string
   startTime: string
   endTime?: string
-  status: 'AGENDADO' | 'EM_ANDAMENTO' | 'CONCLUIDO' | 'CANCELADO' | 'NAO_COMPARECEU'
+  status: 'AGENDADO' | 'CONFIRMADO' | 'CONCLUIDO' | 'CANCELADO'
   paymentMethod?: 'DINHEIRO' | 'CARTAO_DEBITO' | 'CARTAO_CREDITO' | 'PIX' | 'PARCELADO'
   totalPrice?: number
   discount?: number

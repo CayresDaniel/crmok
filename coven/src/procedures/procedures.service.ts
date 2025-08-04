@@ -76,7 +76,7 @@ export class ProceduresService {
     });
   }
 
-  async addProduct(procedureId: string, productId: string, quantity: number) {
+  async addProduct(procedureId: string, productId: string) {
     await this.findOne(procedureId);
 
     return this.prisma.procedureProduct.upsert({
@@ -86,11 +86,10 @@ export class ProceduresService {
           productId,
         },
       },
-      update: { quantity },
+      update: {},
       create: {
         procedureId,
         productId,
-        quantity,
       },
     });
   }

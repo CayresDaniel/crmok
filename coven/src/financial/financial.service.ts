@@ -87,14 +87,14 @@ export class FinancialService {
 
     const receitas = transactions
       .filter((t) => t.type === 'RECEITA')
-      .reduce((sum, t) => sum + Number(t.amount), 0);
+      .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
 
     const despesas = transactions
       .filter((t) => t.type === 'DESPESA')
-      .reduce((sum, t) => sum + Number(t.amount), 0);
+      .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
 
     const receitaAgendamentos = appointments.reduce(
-      (sum, apt) => sum + Number(apt.totalPrice || 0),
+      (sum, apt) => sum + parseFloat((apt.totalPrice || 0).toString()),
       0,
     );
 

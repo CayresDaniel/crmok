@@ -89,10 +89,8 @@
           <select v-model="statusFilter" class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors">
             <option value="">Todos</option>
             <option value="AGENDADO">Agendado</option>
-            <option value="EM_ANDAMENTO">Em Andamento</option>
             <option value="CONCLUIDO">Concluído</option>
             <option value="CANCELADO">Cancelado</option>
-            <option value="NAO_COMPARECEU">Não Compareceu</option>
           </select>
         </div>
         <div>
@@ -239,37 +237,94 @@
       </div>
     </div>
 
-    <!-- Calendar View -->
-    <div v-if="viewMode === 'calendar'" class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl p-6">
-      <div class="grid grid-cols-7 gap-2">
-        <!-- Header -->
-        <div v-for="day in weekDays" :key="day" class="text-center py-3 text-sm font-semibold text-gray-400">
-          {{ day }}
-        </div>
-        
-        <!-- Days -->
-        <div
-          v-for="day in calendarDays"
-          :key="day.date"
-          class="min-h-[140px] p-3 border border-gray-700 rounded-lg bg-gray-800/30 hover:bg-gray-800/50 transition-colors"
-          :class="{ 'bg-purple-900/10 border-purple-800': day.isToday }"
-        >
-          <div class="text-sm font-medium mb-2" :class="day.isToday ? 'text-purple-400' : 'text-gray-300'">
-            {{ day.day }}
+    <!-- Weekly Calendar View - iPhone Style -->
+    <div v-if="viewMode === 'calendar'" class="bg-gray-900/50 backdrop-blur border border-gray-800 rounded-xl overflow-hidden">
+      <!-- Week Header with Days and Dates -->
+      <div class="bg-gray-800/50 border-b border-gray-700">
+        <div class="grid grid-cols-8 gap-0">
+          <!-- Time Column Header -->
+          <div class="p-4 border-r border-gray-700">
+            <div class="text-xs text-gray-400 font-medium">Horário</div>
           </div>
-          <div class="space-y-1 max-h-[100px] overflow-y-auto">
-            <div
-              v-for="appointment in day.appointments"
-              :key="appointment.id"
-              @click="editAppointment(appointment)"
-              class="text-xs p-2 rounded cursor-pointer transition-all hover:scale-105"
-              :class="getCalendarAppointmentClass(appointment.status)"
+          
+          <!-- Day Headers -->
+          <div
+            v-for="day in weekDays"
+            :key="day.date"
+            class="p-4 text-center border-r border-gray-700 last:border-r-0"
+            :class="{ 'bg-purple-900/20': day.isToday }"
+          >
+            <div class="text-xs font-medium text-gray-400 mb-1">{{ day.dayName }}</div>
+            <div 
+              class="text-lg font-bold"
+              :class="day.isToday ? 'text-purple-400' : 'text-white'"
             >
-              <div class="font-medium text-white truncate">
-                {{ appointment.client?.name }}
-              </div>
-              <div class="text-gray-300">
-                {{ formatTime(appointment.startTime) }}
+              {{ day.dayNumber }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Time Grid -->
+      <div class="overflow-auto max-h-[800px]">
+        <div class="relative">
+          <!-- Hour Lines -->
+          <div
+            v-for="hour in timeSlots"
+            :key="hour"
+            class="grid grid-cols-8 gap-0 border-b border-gray-800/50"
+            :style="`height: ${HOUR_HEIGHT}px`"
+          >
+            <!-- Time Label -->
+            <div class="flex items-center justify-center border-r border-gray-700 bg-gray-800/30">
+              <span class="text-sm text-gray-400 font-medium">{{ formatHour(hour) }}</span>
+            </div>
+            
+            <!-- Day Columns -->
+            <div
+              v-for="day in weekDays"
+              :key="`${day.date}-${hour}`"
+              class="border-r border-gray-700/30 last:border-r-0 relative"
+              :class="{ 'bg-purple-900/5': day.isToday }"
+            >
+              <!-- Half-hour line -->
+              <div class="absolute top-1/2 left-0 right-0 border-t border-gray-800/30"></div>
+            </div>
+          </div>
+
+          <!-- Appointments Overlay -->
+          <div class="absolute inset-0 pointer-events-none">
+            <div
+              v-for="appointment in weekAppointments"
+              :key="appointment.id"
+              @click="handleAppointmentClick(appointment)"
+              class="absolute rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl cursor-pointer pointer-events-auto group"
+              :style="getAppointmentStyle(appointment)"
+              :class="getAppointmentClass(appointment.status)"
+            >
+              <div class="p-2 h-full flex flex-col justify-between overflow-hidden">
+                <div class="space-y-1">
+                  <div class="text-xs font-semibold text-white truncate group-hover:scale-105 transition-transform">
+                    {{ appointment.client?.name }}
+                  </div>
+                  <div class="text-xs text-gray-200 opacity-90 truncate">
+                    {{ appointment.user?.name || 'Sem profissional' }}
+                  </div>
+                </div>
+                
+                <div class="space-y-1">
+                  <div class="text-xs text-gray-300 opacity-80">
+                    {{ formatTimeRange(appointment.startTime, appointment.endTime) }}
+                  </div>
+                  <div v-if="appointment.status !== 'AGENDADO'" class="text-xs">
+                    <span 
+                      class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium"
+                      :class="getStatusBadgeClass(appointment.status)"
+                    >
+                      {{ getStatusLabel(appointment.status) }}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -316,7 +371,7 @@
                   </div>
                 </div>
                 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div class="form-group">
                     <label class="form-label">
                       <CalendarIcon class="w-4 h-4" />
@@ -342,19 +397,6 @@
                       class="form-input"
                     />
                   </div>
-                  
-                  <div class="form-group">
-                    <label class="form-label">
-                      <ClockIcon class="w-4 h-4" />
-                      Hora Fim *
-                    </label>
-                    <input
-                      v-model="appointmentForm.endTime"
-                      type="time"
-                      required
-                      class="form-input"
-                    />
-                  </div>
                 </div>
                 
                 <div class="form-group">
@@ -362,10 +404,22 @@
                     <CubeIcon class="w-4 h-4" />
                     Procedimentos
                   </label>
+                  
+                  <!-- Barra de Pesquisa -->
+                  <div class="relative mb-3">
+                    <input
+                      v-model="procedureSearchTerm"
+                      type="text"
+                      placeholder="Pesquisar procedimentos..."
+                      class="w-full px-4 py-2 pl-10 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
+                    />
+                    <MagnifyingGlassIcon class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                  </div>
+                  
                   <div class="max-h-32 sm:max-h-40 overflow-y-auto border border-gray-700 rounded-lg p-2 sm:p-3 bg-gray-800/30">
                     <div class="space-y-1 sm:space-y-2">
                       <label
-                        v-for="procedure in procedures"
+                        v-for="procedure in filteredProcedures"
                         :key="procedure.id"
                         class="flex items-center space-x-2 sm:space-x-3 cursor-pointer hover:bg-gray-700/50 p-1.5 sm:p-2 rounded transition-colors"
                       >
@@ -376,43 +430,32 @@
                           class="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 flex-shrink-0"
                         />
                         <div class="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between min-w-0">
-                          <span class="text-white text-sm font-medium truncate">{{ procedure.name }}</span>
+                          <div class="flex flex-col">
+                            <span class="text-white text-sm font-medium truncate">{{ procedure.name }}</span>
+                            <span v-if="procedure.category" class="text-xs text-gray-400">{{ procedure.category }}</span>
+                          </div>
                           <span class="text-xs sm:text-sm text-purple-400 font-semibold">{{ formatCurrency(procedure.price) }}</span>
                         </div>
                       </label>
+                      
+                      <div v-if="filteredProcedures.length === 0" class="text-center py-4">
+                        <p class="text-gray-400 text-sm">Nenhum procedimento encontrado</p>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div class="form-group">
-                    <label class="form-label">
-                      <CheckCircleIcon class="w-4 h-4" />
-                      Status
-                    </label>
-                    <select v-model="appointmentForm.status" class="form-input">
-                      <option value="AGENDADO">Agendado</option>
-                      <option value="EM_ANDAMENTO">Em Andamento</option>
-                      <option value="CONCLUIDO">Concluído</option>
-                      <option value="CANCELADO">Cancelado</option>
-                      <option value="NAO_COMPARECEU">Não Compareceu</option>
-                    </select>
-                  </div>
-                  
-                  <div class="form-group">
-                    <label class="form-label">
-                      <CreditCardIcon class="w-4 h-4" />
-                      Método de Pagamento
-                    </label>
-                    <select v-model="appointmentForm.paymentMethod" class="form-input">
-                      <option value="">Selecione</option>
-                      <option value="DINHEIRO">Dinheiro</option>
-                      <option value="CARTAO_DEBITO">Cartão de Débito</option>
-                      <option value="CARTAO_CREDITO">Cartão de Crédito</option>
-                      <option value="PIX">PIX</option>
-                      <option value="PARCELADO">Parcelado</option>
-                    </select>
-                  </div>
+                <div class="form-group">
+                  <label class="form-label">
+                    <CheckCircleIcon class="w-4 h-4" />
+                    Status
+                  </label>
+                  <select v-model="appointmentForm.status" class="form-input">
+                    <option value="AGENDADO">Agendado</option>
+                    <option value="CONFIRMADO">Confirmado</option>
+                    <option value="CONCLUIDO">Concluído</option>
+                    <option value="CANCELADO">Cancelado</option>
+                  </select>
                 </div>
                 
                 <!-- Seção de Preços -->
@@ -671,7 +714,8 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   Squares2X2Icon,
-  ListBulletIcon 
+  ListBulletIcon,
+  MagnifyingGlassIcon 
 } from '@heroicons/vue/24/outline'
 
 definePageMeta({
@@ -700,7 +744,14 @@ const clientFilter = ref('')
 const hairdresserFilter = ref('')
 
 const currentWeekStart = ref(new Date())
-const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+// Constants for calendar
+const HOUR_HEIGHT = 60 // Height of each hour in pixels
+const START_HOUR = 8 // 8:00
+const END_HOUR = 20 // 20:00 (8:00 PM)
+
+// Time slots for the calendar
+const timeSlots = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i)
 
 const showCreateModal = ref(false)
 const editingAppointment = ref(null)
@@ -711,21 +762,32 @@ const showRescheduleModal = ref(false)
 const completedClient = ref(null)
 const rescheduleDate = ref('')
 const rescheduling = ref(false)
+const procedureSearchTerm = ref('')
 
 const appointmentForm = reactive({
   clientId: '',
   userId: '',
   date: '',
   startTime: '',
-  endTime: '',
   procedureIds: [],
   status: 'AGENDADO',
   observations: '',
-  paymentMethod: '',
   discount: 0
 })
 
 // Computed
+const filteredProcedures = computed(() => {
+  if (!procedureSearchTerm.value.trim()) {
+    return procedures.value
+  }
+  
+  const searchTerm = procedureSearchTerm.value.toLowerCase().trim()
+  return procedures.value.filter(procedure => 
+    procedure.name.toLowerCase().includes(searchTerm) ||
+    (procedure.category && procedure.category.toLowerCase().includes(searchTerm))
+  )
+})
+
 const filteredAppointments = computed(() => {
   let filtered = appointments.value
 
@@ -755,30 +817,39 @@ const filteredAppointments = computed(() => {
   return filtered.sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
 })
 
-const calendarDays = computed(() => {
+// Week days with proper formatting for weekly view (Monday to Sunday)
+const weekDays = computed(() => {
   const start = new Date(currentWeekStart.value)
   const days = []
   const today = new Date().toDateString()
+  const dayNames = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
   
   for (let i = 0; i < 7; i++) {
     const date = new Date(start)
     date.setDate(start.getDate() + i)
     
-    const dayAppointments = appointments.value.filter(apt => {
-      const aptDateStr = apt.date.split('T')[0] // YYYY-MM-DD
-      const dayDateStr = date.toISOString().split('T')[0] // YYYY-MM-DD
-      return aptDateStr === dayDateStr
-    })
-    
     days.push({
       date: date.toISOString().split('T')[0],
-      day: date.getDate(),
+      dayName: dayNames[i], // Use array index for Monday-first week
+      dayNumber: date.getDate(),
       isToday: date.toDateString() === today,
-      appointments: dayAppointments
+      fullDate: date
     })
   }
   
   return days
+})
+
+// Appointments for the current week filtered and positioned
+const weekAppointments = computed(() => {
+  const start = new Date(currentWeekStart.value)
+  const end = new Date(start)
+  end.setDate(start.getDate() + 7)
+  
+  return filteredAppointments.value.filter(apt => {
+    const aptDate = new Date(apt.date)
+    return aptDate >= start && aptDate < end
+  })
 })
 
 const todayAppointments = computed(() => {
@@ -792,7 +863,7 @@ const todayAppointments = computed(() => {
 })
 
 const confirmedAppointments = computed(() => {
-  return appointments.value.filter(apt => apt.status === 'EM_ANDAMENTO').length
+  return appointments.value.filter(apt => apt.status === 'CONFIRMADO').length
 })
 
 const pendingAppointments = computed(() => {
@@ -864,48 +935,164 @@ const formatWeekRange = (startDate) => {
   return `${start.toLocaleDateString('pt-BR', options)} - ${end.toLocaleDateString('pt-BR', options)}`
 }
 
-const getStatusColor = (status) => {
-  const colors = {
-    AGENDADO: 'bg-blue-500',
-    EM_ANDAMENTO: 'bg-green-500',
-    CONCLUIDO: 'bg-gray-500',
-    CANCELADO: 'bg-red-500',
-    NAO_COMPARECEU: 'bg-orange-500'
+// New methods for weekly calendar
+const formatHour = (hour) => {
+  return `${hour.toString().padStart(2, '0')}:00`
+}
+
+const formatTimeRange = (startTime, endTime) => {
+  const start = formatTime(startTime)
+  const end = endTime ? formatTime(endTime) : ''
+  return end ? `${start} - ${end}` : start
+}
+
+const getAppointmentStyle = (appointment) => {
+  const appointmentDate = new Date(appointment.date)
+  const startTime = new Date(appointment.startTime)
+  const endTime = appointment.endTime ? new Date(appointment.endTime) : new Date(startTime.getTime() + (60 * 60 * 1000)) // Default 1 hour
+  
+  // Find which day column this appointment belongs to
+  const dayIndex = weekDays.value.findIndex(day => 
+    appointmentDate.toDateString() === new Date(day.date).toDateString()
+  )
+  
+  if (dayIndex === -1) return { display: 'none' }
+  
+  // Calculate position
+  const startHour = startTime.getHours()
+  const startMinute = startTime.getMinutes()
+  const endHour = endTime.getHours()
+  const endMinute = endTime.getMinutes()
+  
+  // Only show appointments within working hours
+  if (startHour < START_HOUR || startHour >= END_HOUR) {
+    return { display: 'none' }
   }
-  return colors[status] || 'bg-gray-500'
+  
+  // Position from start hour
+  const topOffset = (startHour - START_HOUR) * HOUR_HEIGHT + (startMinute / 60) * HOUR_HEIGHT
+  
+  // Duration in pixels  
+  const durationInHours = (endHour - startHour) + (endMinute - startMinute) / 60
+  const height = Math.max(durationInHours * HOUR_HEIGHT, 40) // Minimum height for visibility
+  
+  // Column position with proper spacing
+  const columnWidth = 100 / 8 // 8 columns total (1 time + 7 days)
+  const leftPercent = (dayIndex + 1) * columnWidth
+  const widthPercent = columnWidth - 0.5 // Small margin for visual separation
+  
+  return {
+    top: `${topOffset}px`,
+    left: `${leftPercent}%`,
+    width: `${widthPercent}%`,
+    height: `${height}px`,
+    zIndex: 10,
+    marginLeft: '2px',
+    marginRight: '2px'
+  }
+}
+
+const getAppointmentClass = (status) => {
+  const baseClasses = 'border-l-4'
+  
+  switch (status) {
+    case 'AGENDADO':
+      return `${baseClasses} bg-blue-600/90 border-blue-400 hover:bg-blue-500/90`
+    case 'CONFIRMADO':
+      return `${baseClasses} bg-yellow-600/90 border-yellow-400 hover:bg-yellow-500/90`
+    case 'CONCLUIDO':
+      return `${baseClasses} bg-purple-600/90 border-purple-400 hover:bg-purple-500/90`
+    case 'CANCELADO':
+      return `${baseClasses} bg-red-600/90 border-red-400 hover:bg-red-500/90`
+    default:
+      return `${baseClasses} bg-blue-600/90 border-blue-400 hover:bg-blue-500/90`
+  }
 }
 
 const getStatusBadgeClass = (status) => {
-  const classes = {
-    AGENDADO: 'bg-blue-900/50 text-blue-400 border border-blue-800',
-    EM_ANDAMENTO: 'bg-green-900/50 text-green-400 border border-green-800',
-    CONCLUIDO: 'bg-gray-900/50 text-gray-400 border border-gray-800',
-    CANCELADO: 'bg-red-900/50 text-red-400 border border-red-800',
-    NAO_COMPARECEU: 'bg-orange-900/50 text-orange-400 border border-orange-800'
+  switch (status) {
+    case 'AGENDADO':
+      return 'bg-blue-900/50 text-blue-400 border border-blue-800'
+    case 'CONFIRMADO':
+      return 'bg-yellow-900/50 text-yellow-400 border border-yellow-800'
+    case 'CONCLUIDO':
+      return 'bg-purple-900/50 text-purple-400 border border-purple-800'
+    case 'CANCELADO':
+      return 'bg-red-900/50 text-red-400 border border-red-800'
+    default:
+      return 'bg-blue-900/50 text-blue-400 border border-blue-800'
   }
-  return classes[status] || 'bg-gray-900/50 text-gray-400 border border-gray-800'
+}
+
+const getStatusLabel = (status) => {
+  switch (status) {
+    case 'AGENDADO': return 'Agendado'
+    case 'CONFIRMADO': return 'Confirmado'
+    case 'CONCLUIDO': return 'Concluído'
+    case 'CANCELADO': return 'Cancelado'
+    default: return status
+  }
+}
+
+const handleAppointmentClick = (appointment) => {
+  // Handle different actions based on appointment status
+  switch (appointment.status) {
+    case 'AGENDADO':
+      // Option to confirm or edit
+      editAppointment(appointment)
+      break
+    case 'CONFIRMADO':
+      // Option to open comanda
+      openComanda(appointment)
+      break
+    default:
+      // Default to edit
+      editAppointment(appointment)
+  }
+}
+
+const openComanda = async (appointment) => {
+  try {
+    const { $api } = useNuxtApp()
+    await $api(`/appointments/${appointment.id}/open-comanda`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${useCookie('covenos-token').value}`
+      }
+    })
+    
+    useToast().success('Comanda aberta com sucesso!')
+    await loadAppointments()
+  } catch (error) {
+    console.error('Erro ao abrir comanda:', error)
+    useToast().error('Erro ao abrir comanda')
+  }
+}
+
+const goToComanda = (appointment) => {
+  // This would navigate to a comanda management page
+  // For now, we'll edit the appointment
+  editAppointment(appointment)
+}
+
+const getStatusColor = (status) => {
+  const colors = {
+    AGENDADO: 'bg-blue-500',
+    CONFIRMADO: 'bg-yellow-500',
+    CONCLUIDO: 'bg-purple-500',
+    CANCELADO: 'bg-red-500',
+  }
+  return colors[status] || 'bg-blue-500'
 }
 
 const getStatusText = (status) => {
   const texts = {
     AGENDADO: 'Agendado',
-    EM_ANDAMENTO: 'Em Andamento',
+    CONFIRMADO: 'Confirmado',
     CONCLUIDO: 'Concluído',
     CANCELADO: 'Cancelado',
-    NAO_COMPARECEU: 'Não Compareceu'
   }
   return texts[status] || status
-}
-
-const getCalendarAppointmentClass = (status) => {
-  const classes = {
-    AGENDADO: 'bg-blue-600/20 border-blue-500/50 border',
-    EM_ANDAMENTO: 'bg-green-600/20 border-green-500/50 border',
-    CONCLUIDO: 'bg-gray-600/20 border-gray-500/50 border',
-    CANCELADO: 'bg-red-600/20 border-red-500/50 border line-through opacity-60',
-    NAO_COMPARECEU: 'bg-orange-600/20 border-orange-500/50 border'
-  }
-  return classes[status] || 'bg-gray-600/20 border-gray-500/50 border'
 }
 
 const clearFilters = () => {
@@ -991,13 +1178,12 @@ const resetForm = () => {
     userId: '',
     date: '',
     startTime: '',
-    endTime: '',
     procedureIds: [],
     status: 'AGENDADO',
     observations: '',
-    paymentMethod: '',
     discount: 0
   })
+  procedureSearchTerm.value = ''
 }
 
 const editAppointment = (appointment) => {
@@ -1007,13 +1193,12 @@ const editAppointment = (appointment) => {
     userId: appointment.userId || '',
     date: appointment.date,
     startTime: appointment.startTime?.split('T')[1]?.substr(0, 5),
-    endTime: appointment.endTime?.split('T')[1]?.substr(0, 5),
     procedureIds: appointment.procedures?.map(p => p.procedureId) || [],
     status: appointment.status,
     observations: appointment.observations || '',
-    paymentMethod: appointment.paymentMethod || '',
     discount: appointment.discount || 0
   })
+  procedureSearchTerm.value = ''
   showCreateModal.value = false
 }
 
@@ -1031,14 +1216,27 @@ const saveAppointment = async () => {
     const toast = useToast()
 
     const startDateTime = `${appointmentForm.date}T${appointmentForm.startTime}:00`
+    
+    // Calcular duração total dos procedimentos selecionados
+    const selectedProcedures = procedures.value.filter(proc => 
+      appointmentForm.procedureIds.includes(proc.id)
+    )
+    const totalDuration = selectedProcedures.reduce((sum, proc) => 
+      sum + (proc.duration || 60), 0 // Duração padrão de 60 minutos se não especificada
+    )
+    
+    // Calcular endTime automaticamente
+    const startTime = new Date(startDateTime)
+    const endTime = new Date(startTime.getTime() + (totalDuration * 60 * 1000))
+    const endDateTime = endTime.toISOString()
 
     const payload = {
       clientId: appointmentForm.clientId,
       userId: appointmentForm.userId || undefined,
       date: appointmentForm.date,
       startTime: startDateTime,
+      endTime: endDateTime, // Calculado automaticamente
       procedureIds: appointmentForm.procedureIds,
-      paymentMethod: appointmentForm.paymentMethod || undefined,
       discount: appointmentForm.discount
         ? parseFloat(appointmentForm.discount)
         : undefined,
@@ -1057,6 +1255,7 @@ const saveAppointment = async () => {
     })
 
     console.log('💾 Salvando agendamento (payload final):', payload)
+    console.log('⏱️ Duração total calculada:', totalDuration, 'minutos')
 
     const method = editingAppointment.value ? 'PATCH' : 'POST'
     const url = editingAppointment.value
@@ -1190,9 +1389,12 @@ const confirmReschedule = async () => {
 onMounted(() => {
   const today = new Date()
   const dayOfWeek = today.getDay()
-  const lastSunday = new Date(today)
-  lastSunday.setDate(today.getDate() - dayOfWeek)
-  currentWeekStart.value = lastSunday
+  // Calculate days to subtract to get to Monday (day 1)
+  // If today is Sunday (0), subtract 6 days; otherwise subtract (dayOfWeek - 1)
+  const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+  const lastMonday = new Date(today)
+  lastMonday.setDate(today.getDate() - daysToSubtract)
+  currentWeekStart.value = lastMonday
   
   loadData()
 })

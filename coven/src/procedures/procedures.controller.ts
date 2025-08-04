@@ -55,7 +55,6 @@ export class ProceduresController {
     return this.proceduresService.addProduct(
       id,
       addProductDto.productId,
-      addProductDto.quantity,
     );
   }
 

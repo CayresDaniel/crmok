@@ -67,11 +67,15 @@ model Product {
   stock             Int                @default(0)
   minStock          Int                @default(0)
   unit              String?
+  unitQuantity      Decimal?           @db.Decimal(10, 2) // Quantidade por unidade (ex: 100ml)
+  unitMeasurement   String?            // Unidade de medida (ml, g, etc)
+  addToCost         Boolean            @default(false) // Se deve ser adicionado como custo ao financeiro
   active            Boolean            @default(true)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   procedureProducts ProcedureProduct[]
   stockMovements    StockMovement[]
+  productUsages     ProductUsage[]
 
   @@map("products")
 }
@@ -93,7 +97,6 @@ model ProcedureProduct {
   id          String    @id @default(uuid())
   procedureId String
   productId   String
-  quantity    Int
   procedure   Procedure @relation(fields: [procedureId], references: [id])
   product     Product   @relation(fields: [productId], references: [id])
 
@@ -103,22 +106,29 @@ model ProcedureProduct {
 }
 
 model Appointment {
-  id            String                 @id @default(uuid())
-  clientId      String
-  userId        String
-  date          DateTime
-  startTime     DateTime
-  endTime       DateTime?
-  status        AppointmentStatus      @default(AGENDADO)
-  paymentMethod PaymentMethod?
-  totalPrice    Decimal?               @db.Decimal(10, 2)
-  discount      Decimal?               @db.Decimal(10, 2)
-  observations  String?
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
-  procedures    AppointmentProcedure[]
-  client        Client                 @relation(fields: [clientId], references: [id])
-  user          User                   @relation(fields: [userId], references: [id])
+  id                String                 @id @default(uuid())
+  clientId          String
+  userId            String
+  date              DateTime
+  startTime         DateTime
+  endTime           DateTime?
+  status            AppointmentStatus      @default(AGENDADO)
+  paymentMethod     PaymentMethod?
+  totalPrice        Decimal?               @db.Decimal(10, 2)
+  discount          Decimal?               @db.Decimal(10, 2)
+  partialPayment    Decimal?               @db.Decimal(10, 2) // Pagamento parcial (50%)
+  finalPrice        Decimal?               @db.Decimal(10, 2) // Preço final após descontos e taxas
+  cardTax           Decimal?               @db.Decimal(5, 4)  // Taxa do cartão aplicada
+  paymentData       String?                // JSON com dados de pagamento detalhados
+  observations      String?
+  comandaOpenedAt   DateTime?              // Quando a comanda foi aberta
+  comandaClosedAt   DateTime?              // Quando a comanda foi finalizada
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  procedures        AppointmentProcedure[]
+  productUsages     ProductUsage[]         // Produtos utilizados na comanda
+  client            Client                 @relation(fields: [clientId], references: [id])
+  user              User                   @relation(fields: [userId], references: [id])
 
   @@index([clientId], map: "appointments_clientId_fkey")
   @@index([userId], map: "appointments_userId_fkey")
@@ -136,6 +146,22 @@ model AppointmentProcedure {
   @@unique([appointmentId, procedureId])
   @@index([procedureId], map: "appointment_procedures_procedureId_fkey")
   @@map("appointment_procedures")
+}
+
+model ProductUsage {
+  id              String      @id @default(uuid())
+  appointmentId   String
+  productId       String
+  quantityUsed    Decimal     @db.Decimal(10, 2) // Quantidade utilizada (pode ser em ml, g, etc)
+  unitCost        Decimal?    @db.Decimal(10, 2) // Custo por unidade no momento do uso
+  totalCost       Decimal?    @db.Decimal(10, 2) // Custo total calculado
+  createdAt       DateTime    @default(now())
+  appointment     Appointment @relation(fields: [appointmentId], references: [id])
+  product         Product     @relation(fields: [productId], references: [id])
+
+  @@index([appointmentId], map: "product_usages_appointmentId_fkey")
+  @@index([productId], map: "product_usages_productId_fkey")
+  @@map("product_usages")
 }
 
 model FinancialTransaction {
@@ -180,23 +206,24 @@ enum UserRole {
 
 enum AppointmentStatus {
   AGENDADO
-  EM_ANDAMENTO
+  CONFIRMADO
   CONCLUIDO
   CANCELADO
-  NAO_COMPARECEU
 }
 
 enum PaymentMethod {
+  PIX
   DINHEIRO
   CARTAO_DEBITO
-  CARTAO_CREDITO
-  PIX
-  PARCELADO
+  CARTAO_CREDITO_1X
+  CARTAO_CREDITO_2X
+  CARTAO_CREDITO_3X
+  CARTAO_CREDITO_ACIMA_3X
 }
 
 enum ProductType {
   USO_INTERNO
-  VENDA
+  VENDA_DIRETA
 }
 
 enum ReminderType {

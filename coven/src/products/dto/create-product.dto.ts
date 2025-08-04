@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsNumber,
   IsEnum,
+  IsBoolean,
   Min,
   ValidateIf,
 } from 'class-validator';
@@ -46,4 +47,18 @@ export class CreateProductDto {
   @IsString()
   @IsOptional()
   unit?: string;
+
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  @Min(0)
+  unitQuantity?: number;
+
+  @IsString()
+  @IsOptional()
+  unitMeasurement?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  addToCost?: boolean;
 }

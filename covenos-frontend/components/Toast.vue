@@ -6,7 +6,7 @@
           v-for="toast in toasts"
           :key="toast.id"
           :class="toastClasses(toast.type)"
-          class="max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden"
+          class="max-w-sm w-full bg-gray-900 backdrop-blur border border-gray-800 shadow-lg rounded-lg pointer-events-auto overflow-hidden"
         >
           <div class="p-4">
             <div class="flex items-start">
@@ -21,7 +21,7 @@
               <div class="ml-4 flex-shrink-0 flex">
                 <button
                   @click="removeToast(toast.id)"
-                  class="rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  class="rounded-md inline-flex text-gray-400 hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
                 >
                   <XMarkIcon class="h-5 w-5" />
                 </button>
@@ -57,10 +57,10 @@ const getIcon = (type) => {
 
 const toastClasses = (type) => {
   const classes = {
-    success: 'border-l-4 border-green-400',
-    error: 'border-l-4 border-red-400',
-    warning: 'border-l-4 border-yellow-400',
-    info: 'border-l-4 border-blue-400'
+    success: 'border-l-4 border-green-500',
+    error: 'border-l-4 border-red-500',
+    warning: 'border-l-4 border-yellow-500',
+    info: 'border-l-4 border-purple-500'
   }
   return classes[type] || classes.info
 }
@@ -70,17 +70,17 @@ const iconClasses = (type) => {
     success: 'text-green-400',
     error: 'text-red-400',
     warning: 'text-yellow-400',
-    info: 'text-blue-400'
+    info: 'text-purple-400'
   }
   return classes[type] || classes.info
 }
 
 const textClasses = (type) => {
   const classes = {
-    success: 'text-green-800',
-    error: 'text-red-800',
-    warning: 'text-yellow-800',
-    info: 'text-blue-800'
+    success: 'text-green-300',
+    error: 'text-red-300',
+    warning: 'text-yellow-300',
+    info: 'text-purple-300'
   }
   return classes[type] || classes.info
 }

@@ -25,14 +25,29 @@ export class ProductsService {
   }
 
   async create(createProductDto: CreateProductDto) {
-    return this.prisma.product.create({
+    const product = await this.prisma.product.create({
       data: createProductDto,
     });
+
+    // Se o produto tem estoque inicial e preço, criar transação financeira automaticamente
+    if (product.stock > 0 && product.price && Number(product.price) > 0 && product.addToCost) {
+      console.log('💰 Criando despesa automática para produto criado:', product.name);
+      await this.createFinancialTransactionForProductCreation(product);
+    }
+
+    return product;
   }
 
   async findAll() {
     return this.prisma.product.findMany({
       where: { active: true },
+      include: {
+        productUsages: true,
+        stockMovements: {
+          take: 5,
+          orderBy: { createdAt: 'desc' }
+        }
+      },
       orderBy: { name: 'asc' },
     });
   }
@@ -108,11 +123,17 @@ export class ProductsService {
 
     // Criar transação financeira de despesa para compra de produto
     console.log('💰 Iniciando criação de transação financeira...');
-    await this.createFinancialTransactionForStockAddition(
-      product,
-      stockMovementDto,
-    );
-    console.log('💰 Transação financeira processada.');
+    console.log('💰 Produto:', product.name, 'preço:', product.price, 'addToCost:', product.addToCost);
+    
+    if (product.addToCost) {
+      await this.createFinancialTransactionForStockAddition(
+        product,
+        stockMovementDto,
+      );
+      console.log('💰 Transação financeira processada.');
+    } else {
+      console.log('💰 Produto não marcado como custo - transação não criada.');
+    }
 
     return result;
   }
@@ -144,52 +165,54 @@ export class ProductsService {
   }
 
   async getLowStockProducts() {
-    return this.prisma.product.findMany({
+    // Prisma não suporta comparação entre campos diretamente
+    // Busca todos os produtos ativos e filtra no JavaScript
+    const products = await this.prisma.product.findMany({
       where: {
         active: true,
-        stock: {
-          lte: this.prisma.product.fields.minStock,
-        },
       },
       orderBy: { stock: 'asc' },
     });
+    
+    return products.filter(product => product.stock <= product.minStock);
   }
 
-  async consumeProductForProcedure(
-    productId: string,
-    quantity: number,
-    reason: string,
-  ) {
-    const product = await this.findOne(productId);
-
-    if (product.type !== 'USO_INTERNO') {
-      throw new BadRequestException('Produto não é de uso interno');
-    }
-
-    if (product.stock < quantity) {
-      throw new BadRequestException(
-        `Estoque insuficiente para ${product.name}`,
-      );
-    }
-
-    return this.prisma.$transaction(async (prisma) => {
-      await prisma.stockMovement.create({
-        data: {
-          productId,
-          type: 'DESPESA',
-          quantity,
-          reason,
-        },
-      });
-
-      return prisma.product.update({
-        where: { id: productId },
-        data: {
-          stock: product.stock - quantity,
-        },
-      });
-    });
-  }
+  // MÉTODO OBSOLETO: Consumo automático foi substituído pelo sistema de comandas
+  // async consumeProductForProcedure(
+  //   productId: string,
+  //   quantity: number,
+  //   reason: string,
+  // ) {
+  //   const product = await this.findOne(productId);
+  //
+  //   if (product.type !== 'USO_INTERNO') {
+  //     throw new BadRequestException('Produto não é de uso interno');
+  //   }
+  //
+  //   if (product.stock < quantity) {
+  //     throw new BadRequestException(
+  //       `Estoque insuficiente para ${product.name}`,
+  //     );
+  //   }
+  //
+  //   return this.prisma.$transaction(async (prisma) => {
+  //     await prisma.stockMovement.create({
+  //       data: {
+  //         productId,
+  //         type: 'DESPESA',
+  //         quantity,
+  //         reason,
+  //       },
+  //     });
+  //
+  //     return prisma.product.update({
+  //       where: { id: productId },
+  //       data: {
+  //         stock: product.stock - quantity,
+  //       },
+  //     });
+  //   });
+  // }
 
   private async createFinancialTransactionForStockAddition(
     product: any,
@@ -250,6 +273,53 @@ export class ProductsService {
       console.error('Detalhes do erro:', error.message);
       console.error('Stack trace:', error.stack);
       // Não queremos que falhe a adição de estoque por causa de erro financeiro
+    }
+  }
+
+  private async createFinancialTransactionForProductCreation(product: any) {
+    try {
+      console.log('🔍 Verificando FinancialService para criação de produto:', !!this.financialService);
+
+      if (!this.financialService) {
+        console.error('❌ FinancialService não está disponível para criação de produto!');
+        return;
+      }
+
+      // Calcular o valor total baseado no preço do produto e estoque inicial
+      const totalAmount = Number(product.price) * product.stock;
+      const description = `Despesa - Estoque inicial - Produto: ${product.name} - Quantidade: ${product.stock}${product.unit ? ` ${product.unit}` : ''} - Valor unitário: R$ ${Number(product.price).toFixed(2)}`;
+      
+      console.log(`💰 Criando despesa automática na criação: ${product.name} - R$ ${totalAmount.toFixed(2)}`);
+
+      console.log('💾 Chamando financialService.create para produto criado com:', {
+        type: 'DESPESA',
+        category: 'Produtos/Estoque',
+        amount: totalAmount,
+        isPaid: true,
+      });
+
+      const transaction = await this.financialService.create({
+        type: 'DESPESA',
+        category: 'Produtos/Estoque',
+        description,
+        amount: totalAmount,
+        date: new Date().toISOString(),
+        isPaid: true, // Considera como pago (estoque já foi adquirido)
+        recurrent: false,
+      });
+
+      console.log(
+        `✅ Transação financeira criada para produto novo: ID ${transaction.id}`,
+      );
+      return transaction;
+    } catch (error) {
+      console.error(
+        '❌ Erro ao criar transação financeira para produto criado:',
+        error,
+      );
+      console.error('Detalhes do erro:', error.message);
+      console.error('Stack trace:', error.stack);
+      // Não queremos que falhe a criação do produto por causa de erro financeiro
     }
   }
 }

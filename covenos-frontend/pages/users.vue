@@ -464,19 +464,46 @@ const getRoleText = (role) => {
 
 const loadUsers = async () => {
   try {
+    loading.value = true
     const { $api } = useNuxtApp()
     const token = useCookie('covenos-token')
     
-    const response = await $api('/users', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token.value}`
-      }
-    })
+    console.log('🔄 Carregando usuários da API...')
+    console.log('🔑 Token presente:', token.value ? 'Sim' : 'Não')
     
-    users.value = response.data || []
+    if (!token.value) {
+      console.error('❌ Token não encontrado - redirecionando para login')
+      await navigateTo('/login')
+      return
+    }
+    
+    const response = await $api('/users')
+    
+    console.log('📋 Resposta da API de usuários:', response)
+    console.log('📋 Tipo da resposta:', typeof response)
+    console.log('📋 É array?', Array.isArray(response))
+    
+    // A API retorna um array diretamente
+    users.value = Array.isArray(response) ? response : []
+    
+    console.log('✅ Usuários carregados:', users.value.length)
+    
+    if (users.value.length === 0) {
+      console.warn('⚠️ Nenhum usuário encontrado')
+    }
+    
   } catch (error) {
-    console.error('Erro ao carregar usuários:', error)
+    console.error('❌ Erro ao carregar usuários:', error)
+    
+    // Se é erro 401, redireciona para login
+    if (error.response?.status === 401) {
+      console.log('🔑 Token inválido - redirecionando para login')
+      await navigateTo('/login')
+      return
+    }
+    
+    const errorMessage = error.response?.data?.message || error.message || 'Erro desconhecido'
+    useToast().error('Erro ao carregar usuários: ' + errorMessage)
     users.value = []
   } finally {
     loading.value = false
@@ -490,14 +517,25 @@ const saveUser = async () => {
     const token = useCookie('covenos-token')
     
     const url = editingUser.value ? `/users/${editingUser.value.id}` : '/users'
-    const method = editingUser.value ? 'PUT' : 'POST'
+    const method = editingUser.value ? 'PATCH' : 'POST'
     
     const payload = { ...userForm }
+    
+    // Remove campos vazios
+    Object.keys(payload).forEach(key => {
+      if (payload[key] === '' || payload[key] === null || payload[key] === undefined) {
+        delete payload[key]
+      }
+    })
+    
+    // Se está editando e não tem senha, remove do payload
     if (editingUser.value && !payload.password) {
       delete payload.password
     }
     
-    await $api(url, {
+    console.log('💾 Salvando usuário:', { method, url, payload })
+    
+    const response = await $api(url, {
       method,
       headers: {
         'Authorization': `Bearer ${token.value}`,
@@ -506,10 +544,14 @@ const saveUser = async () => {
       body: payload
     })
     
+    console.log('✅ Usuário salvo:', response)
+    
+    useToast().success(editingUser.value ? 'Usuário atualizado!' : 'Usuário criado!')
     await loadUsers()
     closeModal()
   } catch (error) {
-    console.error('Erro ao salvar usuário:', error)
+    console.error('❌ Erro ao salvar usuário:', error)
+    useToast().error('Erro ao salvar usuário: ' + (error.message || 'Erro desconhecido'))
   } finally {
     saving.value = false
   }
@@ -523,6 +565,8 @@ const deleteUser = async () => {
     const { $api } = useNuxtApp()
     const token = useCookie('covenos-token')
     
+    console.log('🗑️ Excluindo usuário:', userToDelete.value.id)
+    
     await $api(`/users/${userToDelete.value.id}`, {
       method: 'DELETE',
       headers: {
@@ -530,17 +574,25 @@ const deleteUser = async () => {
       }
     })
     
+    console.log('✅ Usuário excluído com sucesso')
+    
+    useToast().success('Usuário excluído!')
     await loadUsers()
     userToDelete.value = null
   } catch (error) {
-    console.error('Erro ao excluir usuário:', error)
+    console.error('❌ Erro ao excluir usuário:', error)
+    useToast().error('Erro ao excluir usuário: ' + (error.message || 'Erro desconhecido'))
   } finally {
     deleting.value = false
   }
 }
 
 // Lifecycle
-onMounted(() => {
-  loadUsers()
+onMounted(async () => {
+  console.log('🚀 Montando página de usuários...')
+  console.log('🔑 Token atual:', useCookie('covenos-token').value ? 'Presente' : 'Ausente')
+  console.log('👤 Usuário atual:', useCookie('covenos-user').value)
+  
+  await loadUsers()
 })
 </script>

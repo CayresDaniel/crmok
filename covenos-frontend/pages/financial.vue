@@ -90,8 +90,8 @@
         
         <select v-model="typeFilter" class="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors">
           <option value="">Todos os tipos</option>
-          <option value="INCOME">Receitas</option>
-          <option value="EXPENSE">Despesas</option>
+          <option value="RECEITA">Receitas</option>
+          <option value="DESPESA">Despesas</option>
         </select>
         
         <select v-model="categoryFilter" class="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors">
@@ -237,16 +237,16 @@
               <td class="py-4 px-6">
                 <span :class="[
                   'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                  transaction.type === 'INCOME' 
+                  transaction.type === 'RECEITA' 
                     ? 'bg-green-900/50 text-green-400 border border-green-800' 
                     : 'bg-red-900/50 text-red-400 border border-red-800'
                 ]">
-                  {{ transaction.type === 'INCOME' ? 'Receita' : 'Despesa' }}
+                  {{ transaction.type === 'RECEITA' ? 'Receita' : 'Despesa' }}
                 </span>
               </td>
               <td class="py-4 px-6 text-right">
-                <span :class="['text-sm font-bold', transaction.type === 'INCOME' ? 'text-green-400' : 'text-red-400']">
-                  {{ transaction.type === 'INCOME' ? '+' : '-' }}{{ formatCurrency(transaction.amount) }}
+                <span :class="['text-sm font-bold', transaction.type === 'RECEITA' ? 'text-green-400' : 'text-red-400']">
+                  {{ transaction.type === 'RECEITA' ? '+' : '-' }}{{ formatCurrency(transaction.amount) }}
                 </span>
               </td>
               <td class="py-4 px-6 text-right">
@@ -378,7 +378,7 @@
                 <div>
                   <label class="block text-sm font-medium text-gray-300 mb-2">Observações</label>
                   <textarea
-                    v-model="transactionForm.description"
+                    v-model="transactionForm.observations"
                     rows="3"
                     class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors resize-none"
                     placeholder="Observações sobre a transação..."
@@ -525,7 +525,8 @@ const transactionForm = reactive({
   date: new Date().toISOString().split('T')[0],
   description: '',
   category: '',
-  amount: ''
+  amount: '',
+  observations: ''
 })
 
 // Computed
@@ -559,9 +560,7 @@ const filteredTransactions = computed(() => {
 
   // Filter by type
   if (typeFilter.value) {
-    // FIX: O tipo na API é 'RECEITA'/'DESPESA', não 'INCOME'/'EXPENSE' como no vue anterior
-    const apiType = typeFilter.value === 'INCOME' ? 'RECEITA' : 'DESPESA';
-    filtered = filtered.filter(transaction => transaction.type === apiType);
+    filtered = filtered.filter(transaction => transaction.type === typeFilter.value);
   }
 
   // Filter by category
@@ -596,7 +595,7 @@ const getMonthlyTotals = (type) => {
              transDate.getMonth() === now.getMonth() && 
              transDate.getFullYear() === now.getFullYear();
     })
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
 };
 
 const monthlyRevenue = computed(() => getMonthlyTotals('RECEITA'));
@@ -609,7 +608,8 @@ const monthlyProfit = computed(() => {
 const totalBalance = computed(() => {
   return transactions.value.reduce((sum, t) => {
     // FIX: O tipo na API é 'RECEITA'/'DESPESA'
-    return t.type === 'RECEITA' ? sum + t.amount : sum - t.amount;
+    const amount = parseFloat(t.amount.toString());
+    return t.type === 'RECEITA' ? sum + amount : sum - amount;
   }, 0)
 })
 
@@ -625,7 +625,7 @@ const categoryBreakdown = computed(() => {
         total: 0
       }
     }
-    breakdown[key].total += transaction.amount
+    breakdown[key].total += parseFloat(transaction.amount.toString())
   })
   
   return Object.values(breakdown).sort((a, b) => b.total - a.total).slice(0, 10)
@@ -654,11 +654,24 @@ const loadTransactions = async () => {
   loading.value = true
   try {
     const { $api } = useNuxtApp()
+    
+    console.log('🔄 Carregando transações financeiras...')
+    
     const response = await $api('/financial')
-    transactions.value = response || []
+    
+    console.log('📋 Resposta da API financeira:', response)
+    console.log('📋 Tipo da resposta:', typeof response)
+    console.log('📋 É array?', Array.isArray(response))
+    
+    transactions.value = Array.isArray(response) ? response : []
+    
+    console.log('✅ Transações carregadas:', transactions.value.length)
+    
   } catch (error) {
-    console.error('Erro ao carregar transações financeiras:', error)
-    useToast().error('Erro ao carregar transações')
+    console.error('❌ Erro ao carregar transações financeiras:', error)
+    const errorMessage = error.response?.data?.message || error.message || 'Erro desconhecido'
+    useToast().error('Erro ao carregar transações: ' + errorMessage)
+    transactions.value = []
   } finally {
     loading.value = false
   }
@@ -667,11 +680,12 @@ const loadTransactions = async () => {
 const resetForm = () => {
   Object.assign(transactionForm, {
     id: null,
-    type: 'RECEITA',
+    type: '',
     date: new Date().toISOString().split('T')[0],
     description: '',
     category: '',
-    amount: ''
+    amount: '',
+    observations: ''
   })
 }
 
@@ -679,7 +693,8 @@ const editTransaction = (transaction) => {
   editingTransaction.value = transaction
   Object.assign(transactionForm, {
     ...transaction,
-    date: transaction.date.split('T')[0]
+    date: transaction.date.split('T')[0],
+    observations: transaction.observations || ''
   })
   showCreateModal.value = true
 }
@@ -696,26 +711,47 @@ const saveTransaction = async () => {
     const { $api } = useNuxtApp()
     const toast = useToast()
     
-    // FIX: Alterado método para PATCH, que é mais adequado para atualizações parciais
     const method = editingTransaction.value ? 'PATCH' : 'POST'
     const url = editingTransaction.value ? `/financial/${editingTransaction.value.id}` : '/financial'
     
-    // FIX: A chamada da API estava comentada. Agora está ativa.
-    await $api(url, {
-      method,
-      body: {
-        ...transactionForm,
-        // Garante que o valor seja numérico
-        amount: parseFloat(transactionForm.amount)
+    const payload = {
+      type: transactionForm.type,
+      date: new Date(transactionForm.date).toISOString(),
+      description: transactionForm.description,
+      category: transactionForm.category,
+      amount: parseFloat(transactionForm.amount),
+      isPaid: true, // Por padrão, considerar como pago
+      recurrent: false // Por padrão, não recorrente
+    }
+    
+    // Adicionar observações se existir
+    if (transactionForm.observations && transactionForm.observations.trim()) {
+      payload.observations = transactionForm.observations.trim()
+    }
+    
+    console.log('💾 Salvando transação:', { method, url, payload })
+    
+    // Remove campos vazios/undefined
+    Object.keys(payload).forEach(key => {
+      if (payload[key] === '' || payload[key] === undefined || payload[key] === null) {
+        delete payload[key]
       }
     })
+    
+    const response = await $api(url, {
+      method,
+      body: payload
+    })
+    
+    console.log('✅ Transação salva:', response)
     
     await loadTransactions()
     closeModal()
     toast.success(editingTransaction.value ? 'Transação atualizada!' : 'Transação criada!')
   } catch (error) {
-    console.error('Erro ao salvar transação:', error)
-    useToast().error('Erro ao salvar transação. Verifique os campos.')
+    console.error('❌ Erro ao salvar transação:', error)
+    const errorMessage = error.response?.data?.message || error.message || 'Erro desconhecido'
+    useToast().error('Erro ao salvar transação: ' + errorMessage)
   } finally {
     saving.value = false
   }

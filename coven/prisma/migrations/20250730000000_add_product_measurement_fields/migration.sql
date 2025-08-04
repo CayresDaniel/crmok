@@ -1,0 +1,7 @@
+-- AlterEnum
+ALTER TABLE `products` MODIFY `type` ENUM('USO_INTERNO', 'VENDA_DIRETA', 'POR_MEDIDA') NOT NULL;
+
+-- AlterTable
+ALTER TABLE `products` ADD COLUMN `unitQuantity` DECIMAL(10, 2) NULL,
+ADD COLUMN `unitMeasurement` VARCHAR(191) NULL,
+ADD COLUMN `addToCost` BOOLEAN NOT NULL DEFAULT false;

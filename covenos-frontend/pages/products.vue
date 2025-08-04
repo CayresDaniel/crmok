@@ -82,7 +82,7 @@
         <select v-model="categoryFilter" class="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors">
           <option value="">Todas as categorias</option>
           <option v-for="type in categories" :key="type" :value="type">
-            {{ type === 'USO_INTERNO' ? 'Uso Interno' : 'Venda' }}
+            {{ getProductTypeLabel(type) }}
           </option>
         </select>
         <select v-model="stockFilter" class="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors">
@@ -136,7 +136,7 @@
           <div class="space-y-3">
             <div class="flex items-center justify-between text-sm">
               <span class="text-gray-400">Tipo:</span>
-              <span class="text-white">{{ product.type === 'USO_INTERNO' ? 'Uso Interno' : 'Venda' }}</span>
+              <span class="text-white">{{ getProductTypeLabel(product.type) }}</span>
             </div>
             
             <div class="flex items-center justify-between text-sm">
@@ -146,7 +146,28 @@
             
             <div class="flex items-center justify-between text-sm">
               <span class="text-gray-400">Estoque:</span>
-              <span class="text-white">{{ product.stock }} {{ product.unit || 'un' }}</span>
+              <span class="text-white">
+                <template v-if="product.type === 'USO_INTERNO' && product.unitQuantity">
+                  <span>{{ calculateAvailableStock(product).availableUnits }} {{ product.unit || 'un' }} disponível</span>
+                  <span v-if="calculateAvailableStock(product).remainingVolume > 0" class="text-gray-400 text-xs">
+                    + {{ calculateAvailableStock(product).remainingVolume }}{{ product.unitMeasurement }}
+                  </span>
+                  <div class="text-gray-500 text-xs">
+                    {{ product.stock }} {{ product.unit || 'un' }} total | {{ calculateAvailableStock(product).totalAvailableVolume }}{{ product.unitMeasurement }} disponível
+                  </div>
+                </template>
+                <template v-else>
+                  {{ product.stock }} {{ product.unit || 'un' }}
+                </template>
+              </span>
+            </div>
+            
+            <div v-if="product.addToCost" class="flex items-center justify-between text-sm">
+              <span class="text-gray-400">Custo Financeiro:</span>
+              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-900/30 text-green-400 border border-green-800">
+                <CheckIcon class="w-3 h-3 mr-1" />
+                Ativo
+              </span>
             </div>
             
             <!-- Stock Progress Bar -->
@@ -260,7 +281,7 @@
                     <select v-model="productForm.type" required class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors">
                       <option value="">Selecione o tipo</option>
                       <option value="USO_INTERNO">Uso Interno</option>
-                      <option value="VENDA">Venda</option>
+                      <option value="VENDA_DIRETA">Venda Direta</option>
                     </select>
                   </div>
                   
@@ -276,6 +297,57 @@
                       <option value="cx">cx</option>
                     </select>
                   </div>
+                </div>
+                
+                <!-- Campos específicos para produtos de uso interno -->
+                <div v-if="productForm.type === 'USO_INTERNO'" class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-900/10 border border-blue-800 rounded-lg">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Quantidade por Unidade</label>
+                    <input
+                      v-model="productForm.unitQuantity"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
+                      placeholder="Ex: 100"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Unidade de Medida</label>
+                    <select v-model="productForm.unitMeasurement" class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors">
+                      <option value="">Selecione</option>
+                      <option value="ml">ml (mililitros)</option>
+                      <option value="g">g (gramas)</option>
+                      <option value="L">L (litros)</option>
+                      <option value="kg">kg (quilogramas)</option>
+                      <option value="cm">cm (centímetros)</option>
+                      <option value="m">m (metros)</option>
+                    </select>
+                  </div>
+                  
+                  <div class="md:col-span-2">
+                    <p class="text-xs text-blue-400">
+                      <strong>Exemplo:</strong> Se você tem 5 frascos de 100ml cada, o estoque total calculado será 500ml disponíveis para uso.
+                    </p>
+                  </div>
+                </div>
+                
+                <!-- Checkbox para adicionar como custo -->
+                <div class="flex items-center space-x-3 p-4 bg-green-900/10 border border-green-800 rounded-lg">
+                  <input
+                    id="addToCost"
+                    v-model="productForm.addToCost"
+                    type="checkbox"
+                    class="w-4 h-4 text-purple-600 bg-gray-800 border-gray-700 rounded focus:ring-purple-500 focus:ring-2"
+                  />
+                  <label for="addToCost" class="text-sm text-gray-300">
+                    <strong>Adicionar como custo ao financeiro</strong>
+                    <br>
+                    <span class="text-xs text-gray-400">
+                      Quando este produto for utilizado em procedimentos, será registrado automaticamente como custo no módulo financeiro.
+                    </span>
+                  </label>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -524,7 +596,8 @@ import {
   PencilIcon, 
   TrashIcon, 
   XMarkIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  CheckIcon
 } from '@heroicons/vue/24/outline'
 
 definePageMeta({
@@ -558,6 +631,9 @@ const productForm = reactive({
   description: '',
   type: '',
   unit: '',
+  unitQuantity: '',
+  unitMeasurement: '',
+  addToCost: false,
   price: '',
   stock: '',
   minStock: 5
@@ -658,6 +734,40 @@ const calculateNewStock = () => {
   return current
 }
 
+const getProductTypeLabel = (type) => {
+  switch (type) {
+    case 'USO_INTERNO': return 'Uso Interno'
+    case 'VENDA_DIRETA': return 'Venda Direta'
+    default: return type
+  }
+}
+
+const calculateAvailableStock = (product) => {
+  if (product.type === 'USO_INTERNO' && product.unitQuantity) {
+    const totalCapacity = product.stock * parseFloat(product.unitQuantity)
+    const totalUsed = product.productUsages ? 
+      product.productUsages.reduce((sum, usage) => sum + parseFloat(usage.quantityUsed), 0) : 0
+    const availableVolume = totalCapacity - totalUsed
+    
+    // Calcula quantas unidades completas ainda temos
+    const availableUnits = Math.floor(availableVolume / parseFloat(product.unitQuantity))
+    const remainingVolume = availableVolume % parseFloat(product.unitQuantity)
+    
+    return {
+      availableUnits,
+      remainingVolume: remainingVolume.toFixed(0),
+      totalAvailableVolume: availableVolume.toFixed(0)
+    }
+  }
+  return { availableUnits: product.stock, remainingVolume: 0, totalAvailableVolume: product.stock }
+}
+
+// Função para compatibilidade (manter o nome antigo)
+const calculateTotalStock = (product) => {
+  const result = calculateAvailableStock(product)
+  return result.totalAvailableVolume
+}
+
 const loadProducts = async () => {
   try {
     const { $api } = useNuxtApp()
@@ -683,6 +793,9 @@ const resetForm = () => {
     description: '',
     type: '',
     unit: '',
+    unitQuantity: '',
+    unitMeasurement: '',
+    addToCost: false,
     price: '',
     stock: '',
     minStock: 5
@@ -728,7 +841,8 @@ const saveProduct = async () => {
       name: productForm.name.trim(),
       type: productForm.type,
       stock: parseInt(productForm.stock) || 0,
-      minStock: parseInt(productForm.minStock) || 0
+      minStock: parseInt(productForm.minStock) || 0,
+      addToCost: productForm.addToCost || false
     }
     
     if (productForm.description && productForm.description.trim()) {
@@ -741,6 +855,17 @@ const saveProduct = async () => {
     
     if (productForm.unit && productForm.unit.trim()) {
       productData.unit = productForm.unit.trim()
+    }
+    
+    // Campos específicos para produtos de uso interno
+    if (productForm.type === 'USO_INTERNO') {
+      if (productForm.unitQuantity && productForm.unitQuantity !== '') {
+        productData.unitQuantity = parseFloat(productForm.unitQuantity)
+      }
+      
+      if (productForm.unitMeasurement && productForm.unitMeasurement.trim()) {
+        productData.unitMeasurement = productForm.unitMeasurement.trim()
+      }
     }
     
     await $api(url, {
